@@ -3,11 +3,7 @@ This repository contains the code for the projects of the Multi Agent Systems co
 
 ## 6. Scheduling Problem with Random Arrivals[^Prj1]
 
-**Setting**: Scheduling problems are central to computing systems, where jobs (or tasks) must be assigned
-to limited resources over time. The goal is often to optimize metrics such as average waiting time,
-latency[^latency], or system throughput. The complexity of the scheduling problem varies depending on system
-assumptions, such as the number of servers, whether preemption is allowed, and whether job durations
-and arrival times are known in advance.
+**Setting**: Scheduling problems are central to computing systems, where jobs (or tasks) must be assigned to limited resources over time. The goal is often to optimize metrics such as average waiting time, latency[^latency], or system throughput. The complexity of the scheduling problem varies depending on system assumptions, such as the number of servers, whether preemption is allowed, and whether job durations and arrival times are known in advance.
 **Objectives**:
  - Implement a simulation of a task processing system where tasks arrive according to a Poisson
 process and are distributed to three processors.
@@ -21,24 +17,7 @@ Job First (SJF)** — in terms of throughput, average waiting time, and load bal
 
 ## 2. Multi-Agent Reinforcement Learning on Stochastic Game[^Prj2]
 #### Setting: Simplified Football Game
-A simplified version of football introduced by Littman[^Lit94]. The game is played on a grid 4 × 5 as
-depicted below. Two players, A and B, occupy distinct squares of the grid and can choose
-one of 5 actions on each turn: N , S, E, W , or stand , corresponding to wanting to move
-one square towards the specified direction (North, South, East, West) or standing still in the
-current position. Once both players have selected their actions, the two moves are executed in
-random order (uniformly). Initially players are positioned as shown in the figure. The circle
-in the figures represents the ball possession. Initially possession of the ball goes to one or the
-other player at random (uniformly). When a player with the ball steps into its opponent’s
-goal area (left for A, right for B), that player wins the game and receives +1 reward (while its
-opponent receives −1). Then, the game is reset to the initial configuration, and ball possession
-is reassigned randomly to one of the players.
-When a player executes an action that would take it to the square occupied by the other
-player, possession of the ball goes to the latter player and the move does not take place. A
-good defensive maneuver, then, is to stand where the player with the ball wants to go. 
-For example, if the two players are one in front of the other and they both choose to go towards
-the other, none of them will actually move and ball possession will shift to (or stay with) the
-one randomly extracted to move first, since it will stop the other’s movement during the second
-action, taking (or keeping) the ball.
+A simplified version of football introduced by Littman[^Lit94]. The game is played on a grid 4 × 5 as depicted below. Two players, A and B, occupy distinct squares of the grid and can choose one of 5 actions on each turn: N , S, E, W , or stand , corresponding to wanting to move one square towards the specified direction (North, South, East, West) or standing still in the current position. Once both players have selected their actions, the two moves are executed in random order (uniformly). Initially players are positioned as shown in the figure. The circle in the figures represents the ball possession. Initially possession of the ball goes to one or the other player at random (uniformly). When a player with the ball steps into its opponent’s goal area (left for A, right for B), that player wins the game and receives +1 reward (while its opponent receives −1). Then, the game is reset to the initial configuration, and ball possession is reassigned randomly to one of the players. When a player executes an action that would take it to the square occupied by the other player, possession of the ball goes to the latter player and the move does not take place. A good defensive maneuver, then, is to stand where the player with the ball wants to go.  For example, if the two players are one in front of the other and they both choose to go towards the other, none of them will actually move and ball possession will shift to (or stay with) the one randomly extracted to move first, since it will stop the other’s movement during the second action, taking (or keeping) the ball.
 
 <p align="center">
   <img src= "./Projects/Multi-Agent Reinforcement Learning on Stochastic Game/Images/MAS_FOOTBALL1.png"
@@ -47,13 +26,9 @@ action, taking (or keeping) the ball.
 </p>
 
 #### Objectives
- - Implement the belief-based joint action learning algorithm (explained in class), with be-
-havioural strategies. As belief function you can use the one mentioned in class (frequency
-of the opponent’s actions in each state) and/or experiment your own.
- - Use the implemented algorithm to learn behavioural strategies for the two-player zero-sum
-stochastic game representing the simplified version of football by [Lit94]. As in the paper,
-the learning must be performed against a random opponent, and against another learner
-of identical design, for 106 steps and parameters:
+ - Implement the belief-based joint action learning algorithm (explained in class), with behavioural strategies. As belief function you can use the one mentioned in class (frequency of the opponent’s actions in each state) and/or experiment your own.
+
+ - Use the implemented algorithm to learn behavioural strategies for the two-player zero-sum stochastic game representing the simplified version of football by [Lit94]. As in the paper, the learning must be performed against a random opponent, and against another learner of identical design, for $10^6$ steps and parameters:
 
 $$
 \begin{aligned}
@@ -64,12 +39,7 @@ $$
 \end{aligned}
 $$
 
- -  Test, for 105 steps, the obtained strategies against a random opponent and against each
-other, counting the total number of games actually finished and the % of games won.
-To emulate the discount factor, at every step the game can terminate immediately with
-probability 1 − γ = 0.1, resulting in a draw (0 reward to both players) and resetting the
-game. Then discuss your findings, and try to compare them with those in Littman[^Lit94], reported
-below, even though the latter were also tested against Q-learned best response strategies.
+ - Test, for $10^5$ steps, the obtained strategies against a random opponent and against each other, counting the total number of games actually finished and the % of games won. To emulate the discount factor, at every step the game can terminate immediately with probability 1 − γ = 0.1, resulting in a draw (0 reward to both players) and resetting the game. Then discuss your findings, and try to compare them with those in Littman[^Lit94], reported below, even though the latter were also tested against Q-learned best response strategies.
 
 <div align="center">
 
