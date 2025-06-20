@@ -93,5 +93,4 @@ below, even though the latter were also tested against Q-learned best response s
 Projects were chosen from...
 
 
-[^Lit94]: [M. L. Littman (1994) Markov games as a framework for multi-agent reinforcement
-learning. Proceedings of ICML’94](https://courses.cs.duke.edu/spring07/cps296.3/littman94markov.pdf)
+[^Lit94]: [M. L. Littman (1994) Markov games as a framework for multi-agent reinforcement learning. Proceedings of ICML’94](Multi-Agent Reinforcement Learning on Stochastic Game/littman94markov.pdf)
