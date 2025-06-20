@@ -1,7 +1,7 @@
 # MAS_2025
 This repository contains the code for the projects of the Multi Agent Systems course teached by Professors Padoan Tommaso and Petrov Tatjana at the Artificial Intelligence &amp; Data Science Master @ University of Trieste
 
-## 6. Scheduling Problem with Random Arrivals
+## 6. Scheduling Problem with Random Arrivals[^Prj1]
 
 **Setting**: Scheduling problems are central to computing systems, where jobs (or tasks) must be assigned
 to limited resources over time. The goal is often to optimize metrics such as average waiting time,
@@ -17,15 +17,9 @@ Job First (SJF)** — in terms of throughput, average waiting time, and load bal
 - Evaluate the strategies under different load conditions (e.g., low vs. high arrival rate)
 - (optional) Model the scheduling problem as an MDP
 
-[^latency]:  **Latency** refers to the total time a job spends in the system from its arrival to its completion. It includes both the
-waiting time and the service time. Minimizing latency is crucial in systems where responsiveness is key, such as in real-time
-processing or user-facing services.
-
-## Results
-
 ---
 
-## 2. Multi-Agent Reinforcement Learning on Stochastic Game
+## 2. Multi-Agent Reinforcement Learning on Stochastic Game[^Prj2]
 #### Setting: Simplified Football Game
 A simplified version of football introduced by Littman[^Lit94]. The game is played on a grid 4 × 5 as
 depicted below. Two players, A and B, occupy distinct squares of the grid and can choose
@@ -47,7 +41,7 @@ one randomly extracted to move first, since it will stop the other’s movement 
 action, taking (or keeping) the ball.
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/4397b224-765c-4648-92f1-37c063f9aa6a" 
+  <img src= "./Projects/Multi-Agent Reinforcement Learning on Stochastic Game/Images/MAS_FOOTBALL1.png"
        alt="MAS Football" 
        width="400"/>
 </p>
@@ -90,7 +84,8 @@ below, even though the latter were also tested against Q-learned best response s
 
 ---
 
-Projects were chosen from...
 
-
+[^latency]:  **Latency** refers to the total time a job spends in the system from its arrival to its completion. It includes both the waiting time and the service time. Minimizing latency is crucial in systems where responsiveness is key, such as in real-time processing or user-facing services.
+[^Prj1]: [Scheduling Problem with Random Arrivals](./Projects/%20Scheduling%20Problem%20with%20Random%20Arrivals/2025_MAS_course_project_topics.pdf)
 [^Lit94]: [M. L. Littman (1994) Markov games as a framework for multi-agent reinforcement learning. Proceedings of ICML’94](./Projects/Multi-Agent%20Reinforcement%20Learning%20on%20Stochastic%20Game/littman94markov.pdf)
+[^Prj2]: [Multi-Agent Reinforcement Learning on Stochastic Game](./Projects/Multi-Agent%20Reinforcement%20Learning%20on%20Stochastic%20Game/Projects-Padoan.pdf)
