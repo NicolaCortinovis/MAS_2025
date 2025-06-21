@@ -4,19 +4,23 @@ from plots import plot_gantt_chart
 import statistics
 import pandas as pd
 import os
+import random
 import argparse
 
 
 
 if __name__ == "__main__":
 
+    # Set random seed for reproducibility
+    random.seed(15)
+
     # Parse command line arguments
     parser = argparse.ArgumentParser(description="Run a scheduling simulation with specified parameters.")
-    parser.add_argument('--ar', type=float, default=0.4, help='Arrival rate of jobs (default: 0.4)')
-    parser.add_argument('--sr', type=float, default=0.2, help='Service rate of jobs (default: 0.2)')
+    parser.add_argument('--ar', type=float, default=0.4, help='Arrival rate of jobs (default: 0.4), higher means more frequent arrivals')
+    parser.add_argument('--sr', type=float, default=0.2, help='Service rate of jobs (default: 0.2), higher means faster service')
     parser.add_argument('--sim_time', type=float, default=50, help='Total simulation time (default: 50)')
     parser.add_argument('--n_proc', type=int, default=3, help='Number of servers (default: 3)')
-    parser.add_argument('--strat', type=str, choices=['FIFO', 'LIFO', 'SJF'], default='FIFO',
+    parser.add_argument('--strat', type=str, choices=['FIFO', 'LIFO', 'SJF', 'Preemptive LIFO'], default='FIFO',
                         help='Scheduling strategy to use (default: FIFO)')
     args = parser.parse_args()
 
@@ -45,7 +49,8 @@ if __name__ == "__main__":
                                 busy_times = busy_times,
                                 jobs_done = jobs_done,
                                 strategy = strategy,
-                                intervals = intervals))
+                                intervals = intervals,
+                                sim_time= sim_time))
 
     env.run(until=sim_time)
 
@@ -53,12 +58,11 @@ if __name__ == "__main__":
     utilizations = [bt/sim_time for bt in busy_times]
     mean_U       = statistics.mean(utilizations)
     std_U        = statistics.pstdev(utilizations)
-    cv_U         = std_U/mean_U if mean_U else float('nan')
+    cv_U         = std_U/mean_U if mean_U else float('nan') 
     total_jobs   = sum(jobs_done)
     throughput   = total_jobs/sim_time
 
 
-    # Create a DataFrame for better visualization with all the metrics
     metrics = pd.DataFrame({
         'Strategy': [strategy],
         'Busy Times': [busy_times],
