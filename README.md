@@ -13,6 +13,9 @@ Job First (SJF)** — in terms of throughput, average waiting time, and load bal
 - Evaluate the strategies under different load conditions (e.g., low vs. high arrival rate)
 - (optional) Model the scheduling problem as an MDP
 
+
+[^latency]:  **Latency** refers to the total time a job spends in the system from its arrival to its completion. It includes both the waiting time and the service time. Minimizing latency is crucial in systems where responsiveness is key, such as in real-time processing or user-facing services.
+
 ---
 
 ## 2. Multi-Agent Reinforcement Learning on Stochastic Game[^Prj2]
@@ -52,10 +55,7 @@ $$
 
 </div>
 
----
 
-
-[^latency]:  **Latency** refers to the total time a job spends in the system from its arrival to its completion. It includes both the waiting time and the service time. Minimizing latency is crucial in systems where responsiveness is key, such as in real-time processing or user-facing services.
 [^Prj1]: [Scheduling Problem with Random Arrivals](./Projects/%20Scheduling%20Problem%20with%20Random%20Arrivals/2025_MAS_course_project_topics.pdf)
 [^Lit94]: [M. L. Littman (1994) Markov games as a framework for multi-agent reinforcement learning. Proceedings of ICML’94](./Projects/Multi-Agent%20Reinforcement%20Learning%20on%20Stochastic%20Game/littman94markov.pdf)
 [^Prj2]: [Multi-Agent Reinforcement Learning on Stochastic Game](./Projects/Multi-Agent%20Reinforcement%20Learning%20on%20Stochastic%20Game/Projects-Padoan.pdf)
