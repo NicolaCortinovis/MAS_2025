@@ -3,7 +3,7 @@ import matplotlib.patches as patches
 import matplotlib.animation as animation
 import numpy as np
 import os
-from football import Football  
+from football_env import SimpleFootballGame
 
 def draw_static_field(ax, cols=5, rows=4):
     ax.set_xlim(-1.5, cols + 0.5)
@@ -18,14 +18,6 @@ def draw_static_field(ax, cols=5, rows=4):
         for y in range(rows):
             rect = plt.Rectangle((x - 0.5, y - 0.5), 1, 1, edgecolor='black', facecolor='none')
             ax.add_patch(rect)
-
-    # Row labels
-    for y in range(rows):
-        ax.text(-2.0, y, str(y + 1), va='center', ha='center', fontsize=10)
-
-    # Column labels
-    for x in range(cols):
-        ax.text(x, 3.8, str(x + 1), va='center', ha='center', fontsize=10)
 
     # Draw goal nets
     for y in [1, 2]:
@@ -86,7 +78,7 @@ def animate_episode(env_states, grid_size=(5, 4), interval=600, save_as=None):
     plt.show()
 
 def main():
-    env = Football()
+    env = SimpleFootballGame()
 
     # Define env characteristics
     env.n_rows = 4
