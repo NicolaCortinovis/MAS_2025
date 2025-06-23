@@ -82,6 +82,7 @@ class Football:
         something (or are 'H'), i.e. that wouldn't
         be guaranteed no-ops by heading off the board.
         """
+
         pos = self.A_pos if player=="A" else self.B_pos
         legal = []
         for act, (dr,dc) in self.diffs.items():
@@ -164,8 +165,6 @@ class Football:
         # Increment step count
         self.step_count += 1
 
-        # Did someone win?
-        if self.A_pos == 
 
         
 
