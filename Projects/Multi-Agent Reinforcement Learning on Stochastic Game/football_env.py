@@ -25,7 +25,25 @@ NUM_STATES = 2 * (N_CELLS ** 2)
 class SimpleFootballGame:
 
     def __init__(self):
-        pass
+        """
+        Initialize the football game environment.
+        The environment consists of a 4x5 grid where two players (A and B) can move
+        and score in their respective goal squares. The game starts with A and B
+        positioned at their starting positions, and the ownership of the ball is
+        randomly assigned to either player. The game allows for movement in the grid,
+        with North, South, East, West, and Halt actions. The game logic includes
+        scoring conditions, legal actions based on player positions, and  collision handling.
+        """
+        self.A_pos = A_STRT  # A's starting position
+        self.B_pos = B_STRT  # B's starting position
+        self.N_CELLS = N_CELLS  # Total number of cells in the field
+        self.ACT = ACT  # Set of actions
+        self.A_STRT = A_STRT  # A's starting position
+        self.B_STRT = B_STRT  # B's starting position 
+        self.A_WINS = A_WINS  # Winning positions for A
+        self.B_WINS = B_WINS  # Winning positions for B
+        self.DIFFS = DIFFS  # Action differences
+        self.ownership = rand.choice(["A", "B"])  # Randomly assign ownership at the start
 
     def reset(self):
         """
@@ -41,11 +59,8 @@ class SimpleFootballGame:
     def state(self):
         """
         Function to return the flattened state of the environment.
-        Reasoning:
-        Considering that each agent can be in (4 x 5) positions and the
-        ownership can be either "A" or "B", the total number of states is:
-        20 * 20 * 2 = 800 states. We flatten a state to its own unique index living
-        inside the range [0, 799].
+        A state is represented by player A's position, player B's position, and the ownership of the ball.
+        Therefore, the state is an integer in the range [0, 799].
         """
         x_a, y_a = self.A_pos 
         x_b, y_b = self.B_pos
@@ -60,7 +75,8 @@ class SimpleFootballGame:
 
     def get_state(self):
         """
-        Decode the integer state back into ((x_b,y_b),(x_a,y_a), ownership).
+        Decode the integer state back into ((x_b,y_b),(x_a,y_a), ownership). 
+        Used for visualization and debugging.
         """
         idx = self.state()
         bit = idx % 2
@@ -74,7 +90,12 @@ class SimpleFootballGame:
         return (x_a, y_a), (x_b, y_b), owner
     
     def clamp(self, row, col):
-        """Keep (row,col) on the board."""
+        """
+        Keep (row,col) on the board.
+        :param row: Row index
+        :param col: Column index
+        :return: Clamped (row, col) tuple within the bounds of the grid
+        """
         return (
             min(max(0, row), ROW-1),
             min(max(0, col), COL-1)
@@ -84,7 +105,10 @@ class SimpleFootballGame:
         """
         Get the legal actions for the given player, but
         always allow the scoring move in the goal squares.
+        :param player: "A" or "B"
+        :return: List of legal actions for the player
         """
+
         pos = self.A_pos if player == "A" else self.B_pos
         legal = []
         for act, (dr, dc) in DIFFS.items():
@@ -120,31 +144,36 @@ class SimpleFootballGame:
         dr, dc = DIFFS[action]
         desired = (cur_pos[0] + dr, cur_pos[1] + dc)
 
-        # 1) Scoring check: must be ball‐holder, in a goal cell, and choose the goal‐move
+        # Did someone score?
         if self.ownership == player and cur_pos in goal_cells and action == goal_mv:
             if player=='A':
-                return True, +1, -1
+                return True, +1, -1  # A scores
             else:
-                return True, -1, +1
+                return True, -1, +1  # B scores
 
-        # 2) Otherwise do the normal move & collision logic
-        #     (we know desired is in‐bounds because legal_actions pruned illegal)
         if desired == other_pos and action!='H':
             # collision → flip possession
             self.ownership = opp
         else:
+            # otherwise, move to desired position
             setattr(self, pos_attr, desired)
 
+        # Game continues, no score
         return False, 0, 0
 
         
     def step(self, action_a, action_b):
         """
         Execute A’s and B’s moves in random order, checking for score after each.
+        :param action_a: Action for player A
+        :param action_b: Action for player B
+        :return: (state, reward_A, reward_B, done)
         """
+        # Randomly choose the order of actions and execute them
         for player, act in rand.sample([('A', action_a), ('B', action_b)], 2):
             done, rA, rB = self.player_move(player, act)
-            if done:
+
+            if done:  # If someone scored, return the state and rewards
                 # Reset positions and ownership for the next game
                 self.reset()
                 return self.state(), rA, rB, True
@@ -157,10 +186,10 @@ class SimpleFootballGameClamp(SimpleFootballGame):
     """
     Variant where every of the 5 actions ('N','S','E','W','H') is always legal.
     Any move that would push you off the board is instead clamped to stay in the same
-    boundary cell.
+    boundary cell. Used for internal tests.
     """
     def legal_actions(self, player):
-        # Always allow all five moves, even ones that later clamp back
+        # Everything is legal
         return list(DIFFS.keys())
 
     def player_move(self, player, action):
@@ -168,7 +197,7 @@ class SimpleFootballGameClamp(SimpleFootballGame):
         Exactly as in the parent, except we clamp *every* non-scoring move
         so that desired is always on-board.
         """
-        # scoring logic is unchanged
+
         if player == 'A':
             cur_pos, other_pos = self.A_pos, self.B_pos
             pos_attr, opp       = 'A_pos', 'B'
@@ -181,11 +210,11 @@ class SimpleFootballGameClamp(SimpleFootballGame):
         dr, dc = DIFFS[action]
         desired = (cur_pos[0] + dr, cur_pos[1] + dc)
 
-        # 1) scoring check
+
         if self.ownership == player and cur_pos in goal_cells and action == goal_mv:
             return (True, +1, -1) if player=='A' else (True, -1, +1)
 
-        # 2) clamp & move/collision
+
         new_pos = self.clamp(desired[0], desired[1])
         if new_pos == other_pos and action != 'H':
             self.ownership = opp
@@ -201,7 +230,7 @@ if __name__ == "__main__":
 
     ####################################################################
     ############# Test the SimpleFootballGame Environment ##############
-    ####################################################################ù
+    ####################################################################
 
     env = SimpleFootballGame()
 

@@ -6,6 +6,12 @@ import os
 from football_env import SimpleFootballGame
 
 def draw_static_field(ax, cols=5, rows=4):
+    """
+    Draws a static soccer field with goals and grid lines.
+    :param ax: Matplotlib axis to draw on.
+    :param cols: Number of columns in the grid.
+    :param rows: Number of rows in the grid.
+    """
     ax.set_xlim(-1.5, cols + 0.5)
     ax.set_ylim(-0.5, rows - 0.5)
     ax.set_xticks([])
@@ -35,7 +41,15 @@ def draw_static_field(ax, cols=5, rows=4):
 
 
 
-def animate_episode(env_states, grid_size=(5, 4), interval=600, save_as=None):
+def animate_episode(trajectory, grid_size=(5, 4), interval=600, save_as=None):
+    """
+    Animates an episode of the soccer game.
+    :param trajectory: List of states from the episode.
+    :param grid_size: Tuple (cols, rows) for the grid size.
+    :param interval: Delay between frames in milliseconds.
+    :param save_as: If provided, saves the animation to this filename.
+    """
+
     cols, rows = grid_size
     fig, ax = plt.subplots(figsize=(cols + 2, rows))
     draw_static_field(ax, cols, rows)
@@ -55,7 +69,7 @@ def animate_episode(env_states, grid_size=(5, 4), interval=600, save_as=None):
         return agent_a, agent_b, label_a, label_b, ball_circle
 
     def update(frame):
-        (ax_b_x, ax_b_y), (ax_a_x, ax_a_y), has_ball = env_states[frame]
+        (ax_b_x, ax_b_y), (ax_a_x, ax_a_y), has_ball = trajectory[frame]
         agent_a.set_data([ax_a_x], [ax_a_y])
         agent_b.set_data([ax_b_x], [ax_b_y])
         label_a.set_position((ax_a_x + 0.1, ax_a_y + 0.1))
@@ -66,7 +80,7 @@ def animate_episode(env_states, grid_size=(5, 4), interval=600, save_as=None):
         ball_circle.set_visible(True)
         return agent_a, agent_b, label_a, label_b, ball_circle
 
-    ani = animation.FuncAnimation(fig, update, frames=len(env_states),
+    ani = animation.FuncAnimation(fig, update, frames=len(trajectory),
                                   init_func=init, blit=True, interval=interval, repeat=False)
 
     if save_as:
@@ -77,8 +91,16 @@ def animate_episode(env_states, grid_size=(5, 4), interval=600, save_as=None):
     plt.title("Soccer Game")
     plt.show()
 
-def plot_policy(policy_a=None, policy_b=None, mode="both", grid_size=(5, 4),
-                title=None, save_as=None):
+def plot_policy(policy_a=None, policy_b=None, mode="both", grid_size=(5, 4), title=None, save_as=None):
+    """
+    Plots the policies for agents A and B on a grid.
+    :param policy_a: Dictionary mapping (row, col) to action for agent A.
+    :param policy_b: Dictionary mapping (row, col) to action for agent B.
+    :param mode: "A", "B", or "both" to indicate which policies to plot.
+    :param grid_size: Tuple (cols, rows) for the grid size.
+    :param title: Title for the plot.
+    :param save_as: If provided, saves the plot to this filename.
+    """
     cols, rows = grid_size
     fig, ax = plt.subplots(figsize=(cols + 2, rows))
     draw_static_field(ax, cols, rows)
@@ -115,6 +137,11 @@ def plot_policy(policy_a=None, policy_b=None, mode="both", grid_size=(5, 4),
 
 
 def main():
+
+    #######################################################################
+        ########### Example of a simple football game ################
+    #######################################################################
+
     env = SimpleFootballGame()
 
     # Define env characteristics

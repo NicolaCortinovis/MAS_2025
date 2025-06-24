@@ -1,8 +1,10 @@
 # This file contains the functions and class needed for the belief-based joing action learning
-# algorithm
+# and its evaluation. We're going to see two types of agents
+# 1) A belief-based joint action learning agent that learns from self-play and random opponents.
+# 2) A random agent that acts randomly in the environment.
 
 import numpy as np
-from football_env import ACT, SimpleFootballGame, SimpleFootballGameClamp, NUM_STATES
+from football_env import ACT, SimpleFootballGame, NUM_STATES
 import random as rand
 from tqdm import tqdm
 
@@ -35,14 +37,15 @@ class BeliefAgent:
         self.Q = np.zeros((n_states, self.n_actions, self.n_actions))
 
         # Note on self.Q
-        # This way we have a 3D array where some entries will always be 0, specifically those
-        # that correspond to illegal actions. E.g. top left corner (0,0) N is illegal so it
-        # will never be picked and updated, but this is not a problem and doens't conflict with 
-        # the convergence requirements as such actions are. Anyways its probably faster to work
-        # like this instead of using a dict or similar structure. Better choice would be to create 
-        # something "ad-hoc" but the gains are minimal and this is easier to read.
+        # Using this approach we'll have a 3D array where some entries will always be 0, specifically those
+        # that correspond to illegal actions. E.g. When an agent is in the top left corner (0,0) N is illegal so it
+        # will never be picked and updated, but this is not a problem and doesn't conflict with
+        # the convergence requirements as such actions are useless if not detremental in the grand context of things.
+        # Its probably faster to work with a np  instead of using a dict or similar structure. 
+        # A better choice would be to create something "ad-hoc" but I suspect the gains
+        # to be marginal and the code would be more complex.
 
-        # Initialize counts for each state-action pair, all to 1 as a  weak-informative prior
+        # Initialize counts for each state-action pair, all to 1 as a weak-informative prior
         # Handling of illegal actions is done inside  get_belief
         self.counts = np.ones((n_states, self.n_actions))
 
@@ -69,14 +72,9 @@ class BeliefAgent:
         # Renormalize the counts to sum to 1
         total = c_masked.sum()
 
-        try:
-            if total == 0:
-                raise ValueError(f"Total counts for state {state} is zero, cannot compute belief distribution.")
-        except ZeroDivisionError:
-            # If total is zero, it means no legal actions were available, return uniform belief
-            belief = np.ones(len(self.actions)) / len(self.actions)
-            return belief
-
+        assert total > 0, "Total counts must be greater than zero to avoid division by zero."
+        
+        # Compute the belief distribution
         belief = c_masked / total
 
         return belief
@@ -95,6 +93,7 @@ class BeliefAgent:
             return rand.choice(legal_actions)
 
         belief = self.get_belief(state, legal_oppo_actions)
+
         best_val, best_act = -float('inf'), None
 
         for a in legal_actions:
@@ -131,7 +130,7 @@ class BeliefAgent:
         target = reward + (0 if done else self.gamma * future_val)
         td = target - self.Q[state, i, j]
         self.Q[state, i, j] += alpha * td
-        # update counts and decay alpha
+        # update counts of the belief distribution
         self.counts[state, j] += 1
 
 
@@ -144,6 +143,14 @@ def random_policy(legal_actions):
     if not legal_actions:
         raise ValueError("No legal actions available.") # Wont happen but still good to check
     return rand.choice(legal_actions)
+
+
+def set_agent_to_greedy(agent):
+    """
+    Set the agent's exploration rate to 0, making it act greedily. Used for evaluation.
+    :param agent: The agent instance to modify.
+    """
+    agent.epsilon = 0.0
 
 
 def run_episode_train(env, agent_A, agent_B, alpha, alpha_decay, mode="random"):
@@ -229,18 +236,21 @@ def train_for(env, agent_A, agent_B, mode, total_steps=1_000_000, alpha = ALPHA,
 
 def run_episode_test(env, agent_A, agent_B, mode="random", gamma=0.9):
     """
-    Run one full episode (until score or forced draw).
+    Run one full episode in test mode.
     :param env: The environment instance.
     :param agent_A: The agent for player A.
     :param agent_B: The agent for player B (only used in self-play mode).
     :param mode: Mode of operation, either "random" or "selfplay".
-    :param gamma: Force draw parameter
-    :param force_draw: If True, forces a draw with probability 1-gamma if the game is not done.
+    :param gamma: Force draw parameter, 1 implies no forced draws.
     :return: Length of the match, reward for player A, and reward for player B.
     """
     state = env.reset()
     done = False
     match_length = 0
+
+    set_agent_to_greedy(agent_A)
+    if agent_B:
+        set_agent_to_greedy(agent_B)
 
     while not done:
         legal_A = env.legal_actions("A")
@@ -280,16 +290,19 @@ def evaluate(agent_a, agent_b, env, n_steps=100000, gamma=0.9, mode="random"):
         - List of lengths of each match
         - Dictionary with match lengths categorized by outcome (A win, B win, draw)
     """
-    # freeze exploration
-    agent_a.epsilon = 0.0
-    if agent_b: agent_b.epsilon = 0.0
 
     assert gamma >= 0 and gamma <= 1, "Gamma must be between 0 and 1"
+    assert mode in ["random", "selfplay"], "Mode must be either 'random' or 'selfplay'"
 
-    wins_A = wins_B = draws = 0
-    lengths = []
-    by_outcome = {"A": [], "B": [], "draw": []}
-    steps = 0
+    
+    set_agent_to_greedy(agent_a)
+    if agent_b:
+        set_agent_to_greedy(agent_b)
+
+    wins_A = wins_B = draws = 0                     # Initialize counters for wins and draws
+    lengths = []                                    # List to store lengths of each match
+    by_outcome = {"A": [], "B": [], "draw": []}     # Dictionary to categorize match lengths by outcome
+    steps = 0                                       # Counter for total steps taken in the evaluation
 
     while steps < n_steps:
         length, rA, rB = run_episode_test(env, agent_a, agent_b,mode=mode, gamma=gamma)
@@ -316,21 +329,29 @@ def evaluate(agent_a, agent_b, env, n_steps=100000, gamma=0.9, mode="random"):
 
 def collect_episode_states(env, agent_a, agent_b=None, mode="random", gamma=0.9):
     """
-    Returns a list of (A_pos, B_pos, ownership) tuples for each joint step.
+    Collect the states of an episode for visualization or analysis.
+    :param env: The environment instance.
+    :param agent_a: The agent for player A.
+    :param agent_b: The agent for player B (only used in self-play mode).
+    :param mode: Mode of operation, either "random" or "selfplay".
+    :param gamma: Force draw parameter, 1 implies no forced draws.
+    :return: List of states recorded during the episode.
     """
-    states = []
+    trajectory = []
     state = env.reset()
     done = False
     
     assert mode in ["random", "selfplay"], "Mode must be either 'random' or 'selfplay'"
+    assert gamma >= 0 and gamma <= 1, "Gamma must be between 0 and 1"
 
-    agent_a.epsilon = 0.0
+    set_agent_to_greedy(agent_a)
     if agent_b:
-        agent_b.epsilon = 0.0
+        set_agent_to_greedy(agent_b)
 
     while not done:
         # record current positions & who has the ball
-        states.append(env.get_state())  # returns ((x_a,y_a),(x_b,y_b),owner)
+        trajectory.append(env.get_state())  # returns ((x_b,y_b),(x_a,y_a),ownership)
+
 
         legal_A = env.legal_actions("A")
         legal_B = env.legal_actions("B")
@@ -342,12 +363,12 @@ def collect_episode_states(env, agent_a, agent_b=None, mode="random", gamma=0.9)
 
         state, _, _, done = env.step(aA, aB)
 
-        # maybe force a draw
+        # Force a draw
         if gamma != 1 and not done and np.random.rand() > gamma:
             done = True
 
 
-    return states
+    return trajectory
 
 
 if __name__ == "__main__":

@@ -1,4 +1,14 @@
-# Train, Test and plot/animate the agents in a multi-agent reinforcement learning environment.
+# This is the script that runs the training and the evaluation of the agents in the football environment.
+# We're going to train two BeliefAgents, one versus a random agent and one versus a BelifAgent.
+# After that each agent will be evaluated versus a random agent and a BelifAgent.
+# We're going to track the following metrics:
+# - Games per 100k steps
+# - Win percentage for agent A
+# - Win percentage for agent B
+# - Draw percentage
+# - Match lengths
+# The two agents then will be saved to disk and can be loaded later for further evaluation or deployment.
+
 
 from football_agents import train_for, evaluate, BeliefAgent, collect_episode_states
 from football_env import SimpleFootballGame, NUM_STATES, ACT
