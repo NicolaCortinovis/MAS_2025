@@ -1,4 +1,4 @@
-# This file contains the class and functions for the football game environment described in the littman94 paper.
+# This file contains the class and functions for the simplified football game environment described in the littman94 paper.
 
 import numpy as np
 import random as rand
@@ -19,12 +19,13 @@ DIFFS = {                           # Possible actions and their effects on the 
     'H': ( 0,  0)
 }
 
+NUM_STATES = 2 * (N_CELLS ** 2)   
+
 
 class SimpleFootballGame:
 
     def __init__(self):
-        self.step_count = 0
-
+        pass
 
     def reset(self):
         """
@@ -32,7 +33,6 @@ class SimpleFootballGame:
         """
         self.A_pos = A_STRT
         self.B_pos = B_STRT
-        self.step_count = 0
         self.ownership = rand.choice(["A", "B"])
 
         return self.state()
@@ -57,25 +57,21 @@ class SimpleFootballGame:
         index = 2 * ((index_a * N_CELLS) + index_b) + (0 if self.ownership == "A" else 1)
 
         return index
-    
+
     def get_state(self):
         """
-        Get the current state of the environment and unpack it into a tuple.
+        Decode the integer state back into ((x_a,y_a),(x_b,y_b), ownership).
         """
-        
-        index = self.state()
-        ownership = "A" if index % 2 == 0 else "B"
-        index //= 2
-
-        x_b = index % COL
-        index //= COL
-        y_b = index % ROW
-        index //= ROW
-
-        x_a = index % COL
-        y_a = index // COL
-
-        return (x_a, y_a), (x_b, y_b), ownership
+        idx = self.state()
+        bit = idx % 2
+        idx //= 2
+        combined = idx  # 0..399
+        idx_b = combined % N_CELLS  # 0..19
+        idx_a = combined // N_CELLS
+        x_b, y_b = divmod(idx_b, COL)
+        x_a, y_a = divmod(idx_a, COL)
+        owner = "A" if bit == 0 else "B"
+        return (x_a, y_a), (x_b, y_b), owner
     
     def clamp(self, row, col):
         """Keep (row,col) on the board."""
@@ -86,125 +82,191 @@ class SimpleFootballGame:
     
     def legal_actions(self, player):
         """
-        Get the legal actions for the given player.
-        Args:
-            player (str): 'A' or 'B' indicating which player's legal actions to return
-        Returns:
-            list: A list of legal actions for the player.
+        Get the legal actions for the given player, but
+        always allow the scoring move in the goal squares.
         """
-
-        pos = self.A_pos if player=="A" else self.B_pos
+        pos = self.A_pos if player == "A" else self.B_pos
         legal = []
-        for act, (dr,dc) in DIFFS.items():
+        for act, (dr, dc) in DIFFS.items():
             new = self.clamp(pos[0] + dr, pos[1] + dc)
-            # keep the halt action always; prune other moves
-            # whose clamped new position == pos (i.e. they'd hit the wall)
+            # normally prune no‐ops (wall‐bounces)
             if act == 'H' or new != pos:
                 legal.append(act)
+
+        # **Special‐case**: if you're in your goal square, allow the goal‐direction move
+        if player == "A" and pos in A_WINS and self.ownership == "A":
+            if 'W' not in legal:
+                legal.append('W')
+        if player == "B" and pos in B_WINS and self.ownership == "B":
+            if 'E' not in legal:
+                legal.append('E')
 
         return legal
     
     def player_move(self, player, action):
-        """ Move the player according to the action.
-        Args:
-            player (str): 'A' or 'B' indicating which player is moving.
-            action (str): The action to take, one of 'N', 'S', 'E', 'W', 'H'.
         """
-        
-        # Effect of each action
-
-        # Who is moving?
-        if player == 'A':
-            cur_pos = self.A_pos
-            other_pos = self.B_pos
-            pos_attr = 'A_pos'
-            other = 'B'
+        Move player or score.  Returns (done, reward_A, reward_B).
+        """
+        # identify current pos, other pos, etc.
+        if player=='A':
+            cur_pos, other_pos = self.A_pos, self.B_pos
+            pos_attr, opp       = 'A_pos', 'B'
+            goal_cells, goal_mv = A_WINS, 'W'
         else:
-            cur_pos = self.B_pos
-            other_pos = self.A_pos
-            pos_attr = 'B_pos'
-            other = 'A'
+            cur_pos, other_pos = self.B_pos, self.A_pos
+            pos_attr, opp       = 'B_pos', 'A'
+            goal_cells, goal_mv = B_WINS, 'E'
 
-        # Note that we never allow an action that would move off the board
-        # so no need to clamp the position here.
-        dr, dc = DIFFS.get(action, (0, 0))
+        dr, dc = DIFFS[action]
         desired = (cur_pos[0] + dr, cur_pos[1] + dc)
 
-        try:
-            assert 0 <= desired[0] < ROW and 0 <= desired[1] < COL
-        except AssertionError:
-            raise ValueError(f"Invalid action {action} for player {player}. Desired position {desired} is out of bounds.")
+        # 1) Scoring check: must be ball‐holder, in a goal cell, and choose the goal‐move
+        if self.ownership == player and cur_pos in goal_cells and action == goal_mv:
+            if player=='A':
+                return True, +1, -1
+            else:
+                return True, -1, +1
 
-        # If desired is occupied and it the action was not S, block & flip
-        if desired == other_pos:
-            self.ownership = other
-        else: # Otherwise, move there and keep ownership
+        # 2) Otherwise do the normal move & collision logic
+        #     (we know desired is in‐bounds because legal_actions pruned illegal)
+        if desired == other_pos and action!='H':
+            # collision → flip possession
+            self.ownership = opp
+        else:
             setattr(self, pos_attr, desired)
 
-        
-    
+        return False, 0, 0
 
+        
     def step(self, action_a, action_b):
         """
-        Take a step in the environment with the given actions for both players.
-        Returns the new state, rewards for both players, and whether the game is done.
-        Args:
-            action_a (str): Action for player A.
-            action_b (str): Action for player B.
-        Returns:
-            tuple: (new_state, reward_a, reward_b, done)
+        Execute A’s and B’s moves in random order, checking for score after each.
         """
-        
-        # Choose the first player to move randomly (uniform)
-        player = rand.choice(["A", "B"])
-        if player == "A":
-            other_player = "B"
-        else:
-            other_player = "A"
+        for player, act in rand.sample([('A', action_a), ('B', action_b)], 2):
+            done, rA, rB = self.player_move(player, act)
+            if done:
+                # Reset positions and ownership for the next game
+                self.reset()
+                return self.state(), rA, rB, True
 
-        # Move the player then the other player
-        self.player_move(player, action_a if player == "A" else action_b)
-        self.player_move(other_player, action_b if player == "A" else action_a)
-
-        # Increment step count
-        self.step_count += 1
-
-        # Did a player score?
-        if self.A_pos in A_WINS and self.ownership == "A":
-            return self.state(), 1, -1, True
-        elif self.B_pos in B_WINS and self.ownership == "B":
-            return self.state(), -1, 1, True
-        else:
-            return self.state(), 0, 0, False
-
+        # no goal this step
+        return self.state(), 0, 0, False
     
+
+class SimpleFootballGameClamp(SimpleFootballGame):
+    """
+    Variant where every of the 5 actions ('N','S','E','W','H') is always legal.
+    Any move that would push you off the board is instead clamped to stay in the same
+    boundary cell.
+    """
+    def legal_actions(self, player):
+        # Always allow all five moves, even ones that later clamp back
+        return list(DIFFS.keys())
+
+    def player_move(self, player, action):
+        """
+        Exactly as in the parent, except we clamp *every* non-scoring move
+        so that desired is always on-board.
+        """
+        # scoring logic is unchanged
+        if player == 'A':
+            cur_pos, other_pos = self.A_pos, self.B_pos
+            pos_attr, opp       = 'A_pos', 'B'
+            goal_cells, goal_mv = A_WINS, 'W'
+        else:
+            cur_pos, other_pos = self.B_pos, self.A_pos
+            pos_attr, opp       = 'B_pos', 'A'
+            goal_cells, goal_mv = B_WINS, 'E'
+
+        dr, dc = DIFFS[action]
+        desired = (cur_pos[0] + dr, cur_pos[1] + dc)
+
+        # 1) scoring check
+        if self.ownership == player and cur_pos in goal_cells and action == goal_mv:
+            return (True, +1, -1) if player=='A' else (True, -1, +1)
+
+        # 2) clamp & move/collision
+        new_pos = self.clamp(desired[0], desired[1])
+        if new_pos == other_pos and action != 'H':
+            self.ownership = opp
+        else:
+            setattr(self, pos_attr, new_pos)
+
+        return False, 0, 0
+
+
 
 
 if __name__ == "__main__":
-    ############## DEBUGGER #################
+
+    ####################################################################
+    ############# Test the SimpleFootballGame Environment ##############
+    ####################################################################ù
+
     env = SimpleFootballGame()
 
-    # Test state <-> get_state round-trip
-    for _ in range(100):
-        s0 = env.reset()
-        posA, posB, owner = env.get_state()
-        s1 = env.state()
-        assert s0 == s1, f"Round-trip state failed: {s0} vs {s1}"
-    print("State encoding/decoding consistent")
 
-    # Test boundary moves never leave the board
+    # Test state encoding/decoding correctness
+    for s0 in range(NUM_STATES):
+            # manually set the internal state via decoding
+            # decode ownership bit
+            bit = s0 % 2
+            combined = s0 // 2
+            idx_a = combined // N_CELLS
+            idx_b = combined % N_CELLS
+            x_a, y_a = divmod(idx_a, COL)
+            x_b, y_b = divmod(idx_b, COL)
+            env.A_pos = (x_a, y_a)
+            env.B_pos = (x_b, y_b)
+            env.ownership = "A" if bit == 0 else "B"
+            # re-encode via state()
+            s1 = env.state()
+            assert s0 == s1, f"Encoding mismatch: manual {s0} vs state() {s1} for A:{env.A_pos}, B:{env.B_pos}, owner:{env.ownership}"
+    print("State encoding/decoding correctness verified for all states")
+
+
+    # Test that legal actions are correctly generated
     env.reset()
-    env.A_pos = (0,0)
-    env.B_pos = (3,4)
-    for act in ['N','W']:
-        try:
-            env.player_move('A', act)
-        except ValueError:
-            pass  # If you kept the assert check, it'll raise; that's OK
+    env.A_pos, env.B_pos = (1,1), (2,1)
+    env.ownership = 'A'
+    legal_A = env.legal_actions('A')
+    legal_B = env.legal_actions('B')
+    assert 'N' in legal_A and 'S' in legal_A and 'E' in legal_A and 'W' in legal_A and 'H' in legal_A, "A should have all actions available"
+    assert 'N' in legal_B and 'S' in legal_B and 'E' in legal_B and 'W' in legal_B and 'H' in legal_B, "B should have all actions available"
+    print("Legal actions generation works") 
 
-        else:
-            assert env.A_pos == (0,0), f"Boundary move {act} moved A off-board!"
-    print("Boundary moves are blocked")
+    # Test that legal actions are pruned correctly
+    env.reset()
+    env.A_pos, env.B_pos = (0,0), (1,1)
+    env.ownership = 'A'
+    legal_A = env.legal_actions('A')
+    legal_B = env.legal_actions('B')
+    assert 'N' not in legal_A, "A should not be able to move North from (0,0)"
+    assert 'W' not in legal_A, "A should not be able to move West from (0,0)"
+    assert 'S' in legal_A and 'E' in legal_A, "A should be able to move South or East from (0,0)"
+    assert 'N' in legal_B and 'S' in legal_B and 'E' in legal_B and 'W' in legal_B and 'H' in legal_B, "B should have all actions available from (1,1)"
+    print("Legal actions pruning works")
+
+    # Test that legal actions pruning works when in goal squares
+    # A in its goal square, B in a normal square
+    env.reset()
+    env.A_pos, env.B_pos = (1,0), (2,1)
+    env.ownership = 'A'
+    legal_A = env.legal_actions('A') # A should be able to score
+    legal_B = env.legal_actions('B')
+    # A should have all actions available:
+    assert 'N' in legal_A and 'S' in legal_A and 'E' in legal_A and 'W' in legal_A and 'H' in legal_A, "A should have all actions available from its goal square"
+
+    # B in its goal square, A in a normal square
+    env.reset()
+    env.A_pos, env.B_pos = (2,1), (1,4)
+    env.ownership = 'B'
+    legal_A = env.legal_actions('A')
+    legal_B = env.legal_actions('B') # B should be able to score
+    # B should have all actions available:
+    assert 'N' in legal_B and 'S' in legal_B and 'E' in legal_B and 'W' in legal_B and 'H' in legal_B, "B should have all actions available from its goal square"
+
+    print("Legal actions pruning in goal squares works")
 
     # Test collision flips possession and blocks movement
     env.reset()
@@ -215,19 +277,32 @@ if __name__ == "__main__":
     assert env.ownership == 'B', "Possession should have flipped to B"
     print("Collision logic correct")
 
-    # Test goal scoring
-    # Place A next to its goal, give A the ball, then step into the goal.
+    # Test scoring logic
+    # A scores
     env.reset()
-    env.A_pos, env.B_pos = (1,1), (3,4)
+    env.A_pos, env.B_pos = (1,0), (2,1)
+    A_move = 'W'  # A moves West to score
+    B_move = 'H'  # B does nothing
     env.ownership = 'A'
-    # we want A to move West into (1,0), which is in A_WINS
-    # force move-order so A goes first:
-    rand.seed(0)
-    # 0. select random.choice(["A","B"]) → deterministic given the seed
-    s, rA, rB, done = env.step('W', 'H')
-    assert done, "Game should have terminated on goal"
-    assert rA == +1 and rB == -1, f"Bad rewards: {rA},{rB}"
-    print("Goal scoring works")
+    _ , rA, rB, done = env.step(A_move, B_move)  # A scores
+    assert done, "A should have scored"
+    assert rA == 1 and rB == -1, "Rewards should be +1 for A and -1 for B"
+    assert env.A_pos == A_STRT and env.B_pos == B_STRT, "Positions should reset after scoring"
+    assert env.ownership in ['A', 'B'], "Ownership should be randomly assigned after scoring"
+    print("Scoring logic works for A")
+
+    # B scores
+    env.reset()
+    env.B_pos, env.A_pos = (2,4), (1,1)
+    env.ownership = 'B'
+    A_move = 'H'  # A does nothing
+    B_move = 'E'  # B moves East to score
+    _, rA, rB, done = env.step(A_move, B_move)
+    assert done, "B should have scored"
+    assert rA == -1 and rB == 1, "Rewards should be -1 for A and +1 for B"
+    assert env.A_pos == A_STRT and env.B_pos == B_STRT, "Positions should reset after scoring"
+    assert env.ownership in ['A', 'B'], "Ownership should be randomly assigned after scoring"
+    print("Scoring logic works for B")
 
     # Test the face to face collision logic
     # Place A and B in adjacent squares, A has the ball
