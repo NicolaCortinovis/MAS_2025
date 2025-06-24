@@ -3,10 +3,10 @@
 *.mp4
 #.pyc  
 *.pyc
+
 Multi-Agent Reinforcement Learning on Stochastic Game/results/*
 
 
-C:\Users\marta\OneDrive\Desktop\MAS_2025\Projects\
 # Ignore .csv .pkl and Zone.Identifier files
 *.pkl 
 *.csv:Zone.Identifier

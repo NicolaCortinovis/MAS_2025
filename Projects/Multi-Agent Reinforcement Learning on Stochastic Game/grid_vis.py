@@ -77,6 +77,43 @@ def animate_episode(env_states, grid_size=(5, 4), interval=600, save_as=None):
     plt.title("Soccer Game")
     plt.show()
 
+def plot_policy(policy_a=None, policy_b=None, mode="both", grid_size=(5, 4),
+                title=None, save_as=None):
+    cols, rows = grid_size
+    fig, ax = plt.subplots(figsize=(cols + 2, rows))
+    draw_static_field(ax, cols, rows)
+
+    arrow_dx = {'N': 0, 'S': 0, 'E': 0.4, 'W': -0.4, 'H': 0}
+    arrow_dy = {'N': -0.4, 'S': 0.4, 'E': 0, 'W': 0, 'H': 0}
+
+    if mode in ["A", "both"] and policy_a:
+        for (row, col), action in policy_a.items():
+            dx = arrow_dx.get(action, 0)
+            dy = arrow_dy.get(action, 0)
+            ax.arrow(col, row, dx, dy,
+                     head_width=0.15, head_length=0.1,
+                     fc='red', ec='black', alpha=0.7)
+
+    if mode in ["B", "both"] and policy_b:
+        for (row, col), action in policy_b.items():
+            dx = arrow_dx.get(action, 0)
+            dy = arrow_dy.get(action, 0)
+            ax.arrow(col + 0.1, row + 0.1, dx, dy,
+                     head_width=0.15, head_length=0.1,
+                     fc='blue', ec='black', alpha=0.7)
+
+    if title:
+        plt.title(title)
+
+    if save_as:
+        os.makedirs("results", exist_ok=True)
+        plt.savefig(f"results/{save_as}")
+        print(f"Saved static policy plot to results/{save_as}")
+
+    plt.show()
+
+
+
 def main():
     env = SimpleFootballGame()
 
@@ -102,6 +139,22 @@ def main():
         trajectory.append(env.get_state())
 
     animate_episode(trajectory, save_as="example_game.mp4")
+
+    # Random dummy policies for demo
+    policy_a = {(r, c): np.random.choice(['N', 'S', 'E', 'W', 'H'])
+                for r in range(env.n_rows) for c in range(env.n_cols)}
+    policy_b = {(r, c): np.random.choice(['N', 'S', 'E', 'W', 'H'])
+                for r in range(env.n_rows) for c in range(env.n_cols)}
+
+    # Visualize separately
+    plot_policy(policy_a=policy_a, mode="A", grid_size=(5, 4), title="Policy A")
+    plot_policy(policy_b=policy_b, mode="B", grid_size=(5, 4), title="Policy B")
+
+    # Visualize combined
+    plot_policy(policy_a=policy_a, policy_b=policy_b, mode="both",
+                grid_size=(5, 4), title="Combined Policy", save_as="combined_policy.png")
+
+
 
 if __name__ == "__main__":
     main()
