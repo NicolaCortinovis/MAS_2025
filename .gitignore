@@ -4,7 +4,7 @@
 #.pyc  
 *.pyc
 
-Multi-Agent Reinforcement Learning on Stochastic Game/results/*
+/Multi-Agent Reinforcement Learning on Stochastic Game/results/*
 
 
 # Ignore .csv .pkl and Zone.Identifier files
