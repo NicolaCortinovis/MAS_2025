@@ -22,12 +22,12 @@ def draw_static_field(ax, cols=5, rows=4):
     # Draw goal nets
     for y in [1, 2]:
         # A's goal (left)
-        ax.add_patch(plt.Rectangle((-1.5, y - 0.5), 1, 1, color='gold', alpha=0.3))
-        ax.text(-1.0, y, 'GOAL A', va='center', ha='center', fontsize=8)
+        ax.add_patch(plt.Rectangle((-1.5, y - 0.5), 1, 1, color='lightblue', alpha=0.3))
+        ax.text(-1.0, y, "B's GOAL", va='center', ha='center', fontsize=8)
 
         # B's goal (right, flush with grid)
-        ax.add_patch(plt.Rectangle((cols - 0.5, y - 0.5), 1, 1, color='lightblue', alpha=0.3))
-        ax.text(cols, y, 'GOAL B', va='center', ha='center', fontsize=8)
+        ax.add_patch(plt.Rectangle((cols - 0.5, y - 0.5), 1, 1, color='gold', alpha=0.3))
+        ax.text(cols, y, "A's GOAL", va='center', ha='center', fontsize=8)
 
     # Remove outer border (spines)
     for spine in ax.spines.values():
