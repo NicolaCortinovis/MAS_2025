@@ -1,0 +1,24 @@
+Run 1:
+vs Random: 53.7% wins, 1.1% losses, 45.3% draws, 19601 games/100k steps, 4.1 avg length per game
+  A: 5.8
+  B: 10.9
+  draw: 4.1
+
+Run 2:
+vs Random: 53.8% wins, 0.9% losses, 45.3% draws, 19922 games/100k steps, 3.9 avg length per game
+  A: 5.9
+  B: 9.5
+  draw: 3.9
+
+Run 3:
+vs Random: 53.6% wins, 0.8% losses, 45.6% draws, 19815 games/100k steps, 4.0 avg length per game
+  A: 5.9
+  B: 9.5
+  draw: 4.0
+
+Run 4:
+vs Random: 52.9% wins, 1.1% losses, 45.9% draws, 19466 games/100k steps, 4.2 avg length per game
+  A: 5.8
+  B: 11.0
+  draw: 4.2
+

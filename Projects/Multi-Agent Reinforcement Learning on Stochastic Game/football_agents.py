@@ -23,8 +23,6 @@ class BeliefAgent:
         :param env: The environment instance (used for legal actions).
         :param epsilon: Exploration rate for ε-greedy action selection.
         :param gamma: Discount factor for future rewards.
-        :param alpha0: Initial learning rate.
-        :param alpha_decay: Decay factor for the learning rate.
         """
         self.n_states = n_states
         self.actions = actions
@@ -55,9 +53,11 @@ class BeliefAgent:
         """
         Compute the belief distribution over opponent actions in 'state',
         putting zero weight on illegal moves and renormalizing.
+        :param state: Current state of the environment.
+        :param legal_oppo_actions: List of legal actions available for the opponent in the current
+        :return: Belief distribution over opponent actions.
         """
-       
-    
+
 
         # Mask the counts for illegal actions
         c = self.counts[state].copy()
@@ -87,6 +87,7 @@ class BeliefAgent:
         Select an action based on the eps-greedy policy using the belief distribution.
         :param state: Current state of the environment.
         :param legal_actions: List of legal actions available in the current state.
+        :param legal_oppo_actions: List of legal actions available for the opponent.
         :return: Selected action.
         """
         # eps–greedy
@@ -108,6 +109,17 @@ class BeliefAgent:
 
 
     def update(self, state, my_act, opp_act, legal_oppo_actions, reward, alpha, next_state, done):
+        """
+        Update the agent's Q-values and counts based on the observed transition.
+        :param state: Current state of the environment.
+        :param my_act: Action taken by the agent.
+        :param opp_act: Action taken by the opponent.
+        :param legal_oppo_actions: List of legal actions available for the opponent in the next
+        :param reward: Reward received for the action taken.
+        :param alpha: Learning rate for the update.
+        :param next_state: Next state of the environment after taking the action.
+        :param done: Boolean indicating if the episode has ended.
+        """
         i = self.actions.index(my_act)
         j = self.actions.index(opp_act)
         # Q-learning update over joint action:
@@ -134,15 +146,16 @@ def random_policy(legal_actions):
     return rand.choice(legal_actions)
 
 
-def run_episode(env, agent_A, agent_B, alpha, max_steps=10000, mode="random"):
+def run_episode_train(env, agent_A, agent_B, alpha, alpha_decay, mode="random"):
     """
     Run a single episode of the game.
     :param env: The environment instance.
     :param agent_A: The agent for player A.
     :param agent_B: The agent for player B (only used in self-play mode).
-    :param max_steps: Maximum number of steps in the episode.
+    :param alpha: Learning rate for the agents.
+    :param alpha_decay: Decay factor for the learning rate.
     :param mode: Mode of operation, either "random" or "selfplay".
-    :return: Number of steps taken in the episode.
+    :return: Number of steps taken in the episode and the updated alpha value.
     """
     assert mode in ["random", "selfplay"]
 
@@ -182,7 +195,7 @@ def run_episode(env, agent_A, agent_B, alpha, max_steps=10000, mode="random"):
             agent_B.update(state, aB, aA, next_legal_A, rB, alpha, next_state, done)
 
 
-        alpha *= ALPHA_DECAY  # Decay alpha after each step
+        alpha *= alpha_decay # Decay alpha after each step
 
         steps += 1
         state = next_state
@@ -192,7 +205,7 @@ def run_episode(env, agent_A, agent_B, alpha, max_steps=10000, mode="random"):
 
 
 
-def train_for(env, agent_A, agent_B, mode, total_steps=1_000_000, alpha = ALPHA):
+def train_for(env, agent_A, agent_B, mode, total_steps=1_000_000, alpha = ALPHA, alpha_decay=ALPHA_DECAY):
     """
     Train the agents for a specified number of steps.
     :param env: The environment instance.
@@ -200,97 +213,147 @@ def train_for(env, agent_A, agent_B, mode, total_steps=1_000_000, alpha = ALPHA)
     :param agent_B: The agent for player B (only used in self-play mode).
     :param mode: Mode of operation, either "random" or "selfplay".
     :param total_steps: Total number of steps to train the agents.
+    :param alpha: Initial learning rate for the agents.
+    :param alpha_decay: Decay factor for the learning rate.
     """
     assert mode in ["random", "selfplay"]
     steps = 0
     episodes = 0
     while steps < total_steps:
-        ep_len, alpha_new = run_episode(env, agent_A, agent_B, alpha=alpha, max_steps=10_000, mode=mode)
+        ep_len, alpha_new = run_episode_train(env, agent_A, agent_B, alpha=alpha, alpha_decay = alpha_decay, mode=mode)
         alpha = alpha_new
         steps   += ep_len
         episodes+= 1
     print(f"Trained {mode:9s} in ~{steps} steps over {episodes} episodes")
 
 
-def evaluate(agent_a, agent_b, env, n_steps=100_000, gamma=0.9, mode = "random"):
+def run_episode_test(env, agent_A, agent_B, mode="random", gamma=0.9):
     """
-    Play n_steps against random opponent, return (games_finished, games_per_100k, win_pct).
-    :param agent: The agent to evaluate.
+    Run one full episode (until score or forced draw).
     :param env: The environment instance.
-    :param n_steps: Total number of steps to evaluate the agent.
-    :param gamma: Probability of not forcing a draw at each step.
-    :return: Tuple containing the number of games finished, games per 100k steps,
+    :param agent_A: The agent for player A.
+    :param agent_B: The agent for player B (only used in self-play mode).
+    :param mode: Mode of operation, either "random" or "selfplay".
+    :param gamma: Force draw parameter
+    :param force_draw: If True, forces a draw with probability 1-gamma if the game is not done.
+    :return: Length of the match, reward for player A, and reward for player B.
     """
-    steps = 0
-    finished = 0
-    wins_A = 0
-    wins_B = 0
-    draws = 0
-    match_lengths = []
-    match_length_given_outcome = {"A": [], "B": [], "draw": []}
+    state = env.reset()
+    done = False
+    match_length = 0
 
-     # Set epsilon to 0 for evaluation
+    while not done:
+        legal_A = env.legal_actions("A")
+        legal_B = env.legal_actions("B")
+
+        aA = agent_A.select_action(state, legal_A, legal_B)
+        if mode == "random":
+            aB = random_policy(legal_B)
+        else:
+            aB = agent_B.select_action(state, legal_B, legal_A)
+
+        state, rA, rB, done = env.step(aA, aB)
+        match_length += 1
+
+        # maybe force a draw
+        if gamma != 1 and not done and np.random.rand() > gamma:
+            done = True
+            rA = rB = 0
+
+    return match_length, rA, rB
+
+def evaluate(agent_a, agent_b, env, n_steps=100000, gamma=0.9, mode="random"):
+    """
+    Play n_episodes, return aggregated stats.
+    :param agent_a: The agent for player A.
+    :param agent_b: The agent for player B (only used in self-play mode).
+    :param env: The environment instance.
+    :param n_episodes: Number of episodes to run for evaluation.
+    :param gamma: Force draw parameter, 1 implies no forced draws.
+    :param mode: Mode of operation, either "random" or "selfplay".
+    :return: Tuple containing:
+        - Total number of finished games
+        - Average number of games per 100,000 steps
+        - Win percentage for agent A
+        - Win percentage for agent B
+        - Draw percentage
+        - List of lengths of each match
+        - Dictionary with match lengths categorized by outcome (A win, B win, draw)
+    """
+    # freeze exploration
     agent_a.epsilon = 0.0
-    if agent_b is not None:
-        agent_b.epsilon = 0.0
+    if agent_b: agent_b.epsilon = 0.0
 
-    assert mode in ["random", "selfplay"]
+    assert gamma >= 0 and gamma <= 1, "Gamma must be between 0 and 1"
+
+    wins_A = wins_B = draws = 0
+    lengths = []
+    by_outcome = {"A": [], "B": [], "draw": []}
+    steps = 0
 
     while steps < n_steps:
-        match_duration = 0
-        state = env.reset()
-        done = False
-        # we'll count this game only if done==True before hitting a step cap
-        while not done and steps < n_steps:
-            legal_A = env.legal_actions("A")
-            legal_B = env.legal_actions("B")
-            
+        length, rA, rB = run_episode_test(env, agent_a, agent_b,mode=mode, gamma=gamma)
+        lengths.append(length)
+        steps += length
+        if rA == 1:
+            wins_A += 1
+            by_outcome["A"].append(length)
+        elif rB == 1:
+            wins_B += 1
+            by_outcome["B"].append(length)
+        else:
+            draws += 1
+            by_outcome["draw"].append(length)
+
+    finished = wins_A + wins_B + draws
+    win_A_pct = 100 * wins_A / finished
+    win_B_pct = 100 * wins_B / finished
+    draw_pct  = 100 * draws   / finished
+    games_per_100k = finished * (100_000 / sum(lengths))
+
+    return finished, games_per_100k, win_A_pct, win_B_pct, draw_pct, lengths, by_outcome
 
 
-            if mode == "selfplay":
-                # Both agents select actions using their policies
-                aA = agent_a.select_action(state, legal_A, legal_B)
-                aB = agent_b.select_action(state, legal_B, legal_A)
-            else:
-                # Random policy for player B, agent A acts normally using its policy
-                aA = agent_a.select_action(state, legal_A, legal_B)
-                aB = random_policy(legal_B)
-            # Update the environment with the selected actions
-            state, rA, rB, done = env.step(aA, aB)
-            steps += 1
-            match_duration += 1
+def collect_episode_states(env, agent_a, agent_b=None, mode="random", gamma=0.9):
+    """
+    Returns a list of (A_pos, B_pos, ownership) tuples for each joint step.
+    """
+    states = []
+    state = env.reset()
+    done = False
+    
+    assert mode in ["random", "selfplay"], "Mode must be either 'random' or 'selfplay'"
 
-            
+    agent_a.epsilon = 0.0
+    if agent_b:
+        agent_b.epsilon = 0.0
 
-            # Update the agent based on the actions taken and rewards received
-            if not done and np.random.rand() > gamma:
-                # force a draw
-                done = True
-                rA = rB = 0
+    while not done:
+        # record current positions & who has the ball
+        states.append(env.get_state())  # returns ((x_a,y_a),(x_b,y_b),owner)
 
-        if done:
-            finished += 1
-            match_lengths.append(match_duration)
-            if rA == 1:
-                wins_A += 1
-                match_length_given_outcome["A"].append(match_duration)  
-            if rB == 1:
-                wins_B += 1
-                match_length_given_outcome["B"].append(match_duration)
-            if rA == 0 and rB == 0:
-                draws += 1
-                match_length_given_outcome["draw"].append(match_duration)
+        legal_A = env.legal_actions("A")
+        legal_B = env.legal_actions("B")
+        aA = agent_a.select_action(state, legal_A, legal_B)
+        if mode == "random":
+            aB = random_policy(legal_B)
+        else:
+            aB = agent_b.select_action(state, legal_B, legal_A)
 
-    win_A_pct = 100.0 * wins_A / finished if finished > 0 else 0.0
-    win_B_pct = 100.0 * wins_B / finished if finished > 0 else 0.0
-    draw_pct = 100.0 * draws / finished if finished > 0 else 0.0
-    games_per_100k = finished * (100_000 / steps)
-    return finished, games_per_100k, win_A_pct, win_B_pct, draw_pct, match_lengths, match_length_given_outcome
+        state, _, _, done = env.step(aA, aB)
+
+        # maybe force a draw
+        if gamma != 1 and not done and np.random.rand() > gamma:
+            done = True
+
+
+    return states
+
 
 if __name__ == "__main__":
     env = SimpleFootballGame()
 
-    times = 10
+    times = 1
 
     for i in tqdm(range(times)):
 

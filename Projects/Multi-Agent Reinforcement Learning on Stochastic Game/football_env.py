@@ -60,7 +60,7 @@ class SimpleFootballGame:
 
     def get_state(self):
         """
-        Decode the integer state back into ((x_a,y_a),(x_b,y_b), ownership).
+        Decode the integer state back into ((x_b,y_b),(x_a,y_a), ownership).
         """
         idx = self.state()
         bit = idx % 2
@@ -224,6 +224,15 @@ if __name__ == "__main__":
             assert s0 == s1, f"Encoding mismatch: manual {s0} vs state() {s1} for A:{env.A_pos}, B:{env.B_pos}, owner:{env.ownership}"
     print("State encoding/decoding correctness verified for all states")
 
+    # Test over 10k random resets that the ownership is randomly assigned
+    ownerships = []
+    for _ in range(10_000):
+        env.reset()
+        ownerships.append(env.ownership)
+    ownership_counts = {k: ownerships.count(k) for k in set(ownerships)}
+    assert len(ownership_counts) == 2, "Ownership should be either 'A' or 'B'"
+    assert ownership_counts['A'] > 0 and ownership_counts['B'] > 0, "Both ownerships should be represented in the resets"
+    print("Observed ownerships:", ownership_counts)
 
     # Test that legal actions are correctly generated
     env.reset()

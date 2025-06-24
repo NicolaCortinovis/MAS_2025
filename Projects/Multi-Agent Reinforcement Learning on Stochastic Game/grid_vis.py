@@ -55,7 +55,7 @@ def animate_episode(env_states, grid_size=(5, 4), interval=600, save_as=None):
         return agent_a, agent_b, label_a, label_b, ball_circle
 
     def update(frame):
-        (ax_a_x, ax_a_y), (ax_b_x, ax_b_y), has_ball = env_states[frame]
+        (ax_b_x, ax_b_y), (ax_a_x, ax_a_y), has_ball = env_states[frame]
         agent_a.set_data([ax_a_x], [ax_a_y])
         agent_b.set_data([ax_b_x], [ax_b_y])
         label_a.set_position((ax_a_x + 0.1, ax_a_y + 0.1))
