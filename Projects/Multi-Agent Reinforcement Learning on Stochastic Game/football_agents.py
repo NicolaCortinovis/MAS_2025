@@ -231,7 +231,6 @@ def train_for(env, agent_A, agent_B, mode, total_steps=1_000_000, alpha = ALPHA,
         alpha = alpha_new
         steps   += ep_len
         episodes+= 1
-    print(f"Trained {mode:9s} in ~{steps} steps over {episodes} episodes")
 
 
 def run_episode_test(env, agent_A, agent_B, mode="random", gamma=0.9):
@@ -240,7 +239,7 @@ def run_episode_test(env, agent_A, agent_B, mode="random", gamma=0.9):
     :param env: The environment instance.
     :param agent_A: The agent for player A.
     :param agent_B: The agent for player B (only used in self-play mode).
-    :param mode: Mode of operation, either "random" or "selfplay".
+    :param mode: Mode of operation, either "random" or "selfplay" or "random vs selfplay".
     :param gamma: Force draw parameter, 1 implies no forced draws.
     :return: Length of the match, reward for player A, and reward for player B.
     """
@@ -248,18 +247,20 @@ def run_episode_test(env, agent_A, agent_B, mode="random", gamma=0.9):
     done = False
     match_length = 0
 
-    set_agent_to_greedy(agent_A)
-    if agent_B:
-        set_agent_to_greedy(agent_B)
+    assert mode in ["random", "selfplay", "random vs selfplay"], "Mode must be either 'random' or 'selfplay' or 'random vs selfplay'"
 
     while not done:
         legal_A = env.legal_actions("A")
         legal_B = env.legal_actions("B")
 
-        aA = agent_A.select_action(state, legal_A, legal_B)
         if mode == "random":
+            aA = agent_A.select_action(state, legal_A, legal_B)
             aB = random_policy(legal_B)
+        elif mode == "selfplay":
+            aA = agent_A.select_action(state, legal_A, legal_B)
+            aB = agent_B.select_action(state, legal_B, legal_A)
         else:
+            aA = random_policy(legal_A)
             aB = agent_B.select_action(state, legal_B, legal_A)
 
         state, rA, rB, done = env.step(aA, aB)
@@ -272,15 +273,15 @@ def run_episode_test(env, agent_A, agent_B, mode="random", gamma=0.9):
 
     return match_length, rA, rB
 
-def evaluate(agent_a, agent_b, env, n_steps=100000, gamma=0.9, mode="random"):
+def evaluate(agent_A, agent_B, env, n_steps=100000, gamma=0.9, mode="random"):
     """
     Play n_episodes, return aggregated stats.
-    :param agent_a: The agent for player A.
-    :param agent_b: The agent for player B (only used in self-play mode).
+    :param agent_A: The agent for player A.
+    :param agent_B: The agent for player B (only used in self-play mode).
     :param env: The environment instance.
     :param n_episodes: Number of episodes to run for evaluation.
     :param gamma: Force draw parameter, 1 implies no forced draws.
-    :param mode: Mode of operation, either "random" or "selfplay".
+    :param mode: Mode of operation, either "random" or "selfplay" or "random vs selfplay".
     :return: Tuple containing:
         - Total number of finished games
         - Average number of games per 100,000 steps
@@ -292,12 +293,16 @@ def evaluate(agent_a, agent_b, env, n_steps=100000, gamma=0.9, mode="random"):
     """
 
     assert gamma >= 0 and gamma <= 1, "Gamma must be between 0 and 1"
-    assert mode in ["random", "selfplay"], "Mode must be either 'random' or 'selfplay'"
+    assert mode in ["random", "selfplay", "random vs selfplay"], "Mode must be either 'random' or 'selfplay' or 'random vs selfplay'"
 
-    
-    set_agent_to_greedy(agent_a)
-    if agent_b:
-        set_agent_to_greedy(agent_b)
+    if mode == "random":
+        set_agent_to_greedy(agent_A)
+    elif mode == "selfplay":
+        set_agent_to_greedy(agent_A)
+        set_agent_to_greedy(agent_B)
+    else:
+        set_agent_to_greedy(agent_B)
+
 
     wins_A = wins_B = draws = 0                     # Initialize counters for wins and draws
     lengths = []                                    # List to store lengths of each match
@@ -305,7 +310,7 @@ def evaluate(agent_a, agent_b, env, n_steps=100000, gamma=0.9, mode="random"):
     steps = 0                                       # Counter for total steps taken in the evaluation
 
     while steps < n_steps:
-        length, rA, rB = run_episode_test(env, agent_a, agent_b,mode=mode, gamma=gamma)
+        length, rA, rB = run_episode_test(env, agent_A, agent_B,mode=mode, gamma=gamma)
         lengths.append(length)
         steps += length
         if rA == 1:
@@ -327,13 +332,13 @@ def evaluate(agent_a, agent_b, env, n_steps=100000, gamma=0.9, mode="random"):
     return finished, games_per_100k, win_A_pct, win_B_pct, draw_pct, lengths, by_outcome
 
 
-def collect_episode_states(env, agent_a, agent_b=None, mode="random", gamma=0.9):
+def collect_episode_states(env, agent_A, agent_B=None, mode="random", gamma=0.9):
     """
     Collect the states of an episode for visualization or analysis.
     :param env: The environment instance.
-    :param agent_a: The agent for player A.
-    :param agent_b: The agent for player B (only used in self-play mode).
-    :param mode: Mode of operation, either "random" or "selfplay".
+    :param agent_A: The agent for player A.
+    :param agent_B: The agent for player B (only used in self-play mode).
+    :param mode: Mode of operation, either "random" or "selfplay" or "random vs selfplay".
     :param gamma: Force draw parameter, 1 implies no forced draws.
     :return: List of states recorded during the episode.
     """
@@ -341,12 +346,16 @@ def collect_episode_states(env, agent_a, agent_b=None, mode="random", gamma=0.9)
     state = env.reset()
     done = False
     
-    assert mode in ["random", "selfplay"], "Mode must be either 'random' or 'selfplay'"
+    assert mode in ["random", "selfplay", "random vs selfplay"], "Mode must be either 'random' or 'selfplay' or 'random vs selfplay'"
     assert gamma >= 0 and gamma <= 1, "Gamma must be between 0 and 1"
 
-    set_agent_to_greedy(agent_a)
-    if agent_b:
-        set_agent_to_greedy(agent_b)
+    if mode == "random":
+        set_agent_to_greedy(agent_A)
+    elif mode == "selfplay":
+        set_agent_to_greedy(agent_A)
+        set_agent_to_greedy(agent_B)
+    else:
+        set_agent_to_greedy(agent_B)
 
     while not done:
         # record current positions & who has the ball
@@ -355,11 +364,16 @@ def collect_episode_states(env, agent_a, agent_b=None, mode="random", gamma=0.9)
 
         legal_A = env.legal_actions("A")
         legal_B = env.legal_actions("B")
-        aA = agent_a.select_action(state, legal_A, legal_B)
+        
         if mode == "random":
+            aA = agent_A.select_action(state, legal_A, legal_B)
             aB = random_policy(legal_B)
+        elif mode == "selfplay":
+            aA = agent_A.select_action(state, legal_A, legal_B)
+            aB = agent_B.select_action(state, legal_B, legal_A)
         else:
-            aB = agent_b.select_action(state, legal_B, legal_A)
+            aA = random_policy(legal_A)
+            aB = agent_B.select_action(state, legal_B, legal_A)
 
         state, _, _, done = env.step(aA, aB)
 
@@ -370,57 +384,4 @@ def collect_episode_states(env, agent_a, agent_b=None, mode="random", gamma=0.9)
 
     return trajectory
 
-
-if __name__ == "__main__":
-    env = SimpleFootballGame()
-
-    times = 1
-
-    for i in tqdm(range(times)):
-
-        # --- 1) Train A vs random B ---
-        agent_A = BeliefAgent(n_states=NUM_STATES, actions=sorted(ACT), env=env)
-        train_for(env, agent_A, agent_B = None, mode="random", total_steps=1_000_000)
-
-        # Evaluate
-        finished, games_per_100k, win_A_pct, win_B_pct, draw_pct, match_lengths, match_length_given_outcome = evaluate(agent_A, None, env, n_steps=100_000, mode="random")
-        avg_length = np.mean(match_lengths) if match_lengths else 0
-        print(f"vs Random: {win_A_pct:.1f}% wins, {win_B_pct:.1f}% losses, {draw_pct:.1f}% draws, {games_per_100k:.0f} games/100k steps, {avg_length:.1f} avg length per game")
-        # Average match lengths given outcome
-        for outcome, lengths in match_length_given_outcome.items():
-            avg_length = np.mean(lengths) if lengths else 0
-            print(f"  {outcome}: {avg_length:.1f}")
-
-                # Write the results in a .txt file
-        with open("results_random.txt", "a") as f:
-            f.write(f"Run {i+1}:\n")
-            f.write(f"vs Random: {win_A_pct:.1f}% wins, {win_B_pct:.1f}% losses, {draw_pct:.1f}% draws, {games_per_100k:.0f} games/100k steps, {avg_length:.1f} avg length per game\n")
-            for outcome, lengths in match_length_given_outcome.items():
-                avg_length = np.mean(lengths) if lengths else 0
-                f.write(f"  {outcome}: {avg_length:.1f}\n")
-            f.write("\n")
-    
-    for i in tqdm(range(times)):
-
-        # # --- 2) Train A & B in self-play ---
-        agent_A = BeliefAgent(n_states=NUM_STATES, actions=sorted(ACT), env=env)
-        agent_B = BeliefAgent(n_states=NUM_STATES, actions=sorted(ACT), env=env)
-        train_for(env, agent_A, agent_B, mode="selfplay", total_steps=1_000_000)
-
-        # Evaluate
-        finished, games_per_100k, win_A_pct, win_B_pct, draw_pct, match_lengths, match_length_given_outcome = evaluate(agent_A, agent_B, env, n_steps=100_000, mode = "selfplay")
-        avg_length = np.mean(match_lengths) if match_lengths else 0
-        print(f"vs Self-play: {win_A_pct:.1f}% wins, {win_B_pct:.1f}% losses, {draw_pct:.1f}% draws, {games_per_100k:.0f} games/100k steps, {avg_length:.1f} avg length per game")
-        for outcome, lengths in match_length_given_outcome.items():
-            avg_length = np.mean(lengths) if lengths else 0
-            print(f"  {outcome}: {avg_length:.1f}")
-
-        # Save results to a file
-        with open("results_selfplay.txt", "a") as f:
-            f.write(f"Run {i+1}:\n")
-            f.write(f"vs Self-play: {win_A_pct:.1f}% wins, {win_B_pct:.1f}% losses, {draw_pct:.1f}% draws, {games_per_100k:.0f} games/100k steps, {avg_length:.1f} avg length per game\n")
-            for outcome, lengths in match_length_given_outcome.items():
-                avg_length = np.mean(lengths) if lengths else 0
-                f.write(f"  {outcome}: {avg_length:.1f}\n")
-            f.write("\n")
 

@@ -1,6 +1,7 @@
 # This is the script that runs the training and the evaluation of the agents in the football environment.
-# We're going to train two BeliefAgents, one versus a random agent and one versus a BelifAgent.
-# After that each agent will be evaluated versus a random agent and a BelifAgent.
+# We're going to train two BeliefAgents, one versus a random agent and one versus a BeliefAgent.
+# After that each agent will be evaluated versus a random agent and a BeliefAgent.
+# We're also going to evaluate random vs BeliefAgent 
 # We're going to track the following metrics:
 # - Games per 100k steps
 # - Win percentage for agent A
@@ -49,8 +50,8 @@ if __name__ == "__main__":
         )
 
     
-        finished, games_per_100k, win_A_pct, win_B_pct, draw_pct, match_lengths, match_length_given_outcome = evaluate(agent_a = agent_A,
-                                                                                                                    agent_b =  None,
+        finished, games_per_100k, win_A_pct, win_B_pct, draw_pct, match_lengths, match_length_given_outcome = evaluate(agent_A = agent_A,
+                                                                                                                    agent_B =  None,
                                                                                                                     env = env,
                                                                                                                     n_steps= TEST_STEPS,
                                                                                                                     mode = "random",
@@ -96,8 +97,8 @@ if __name__ == "__main__":
         )
 
     
-        finished, games_per_100k, win_A_pct, win_B_pct, draw_pct, match_lengths, match_length_given_outcome = evaluate(agent_a = agent_A,
-                                                                                                                    agent_b =  agent_B,
+        finished, games_per_100k, win_A_pct, win_B_pct, draw_pct, match_lengths, match_length_given_outcome = evaluate(agent_A = agent_A,
+                                                                                                                    agent_B =  agent_B,
                                                                                                                     env = env,
                                                                                                                     n_steps= TEST_STEPS,
                                                                                                                     mode = "selfplay",
@@ -129,16 +130,16 @@ if __name__ == "__main__":
     all_summaries = []
     env.reset()
 
-    for run_idx in tqdm(range(total_runs), desc="Evaluating Belief Agent trained on Random vs Belief Agent trained on Random", unit="run"):
+    for run_idx in tqdm(range(total_runs), desc="Evaluating Belief Agent trained on Random vs Belief Agent trained on Belief Agent", unit="run"):
 
         with open(f'Results/Agents/BR_agents/belief_agent_A_run{run_idx}.pkl', 'rb') as f:
             agent_A = pickle.load(f)
 
-        with open(f'Results/Agents/BR_agents/belief_agent_A_run{total_runs - run_idx - 1}.pkl', 'rb') as f:
+        with open(f'Results/Agents/BBA_agents/belief_agent_B_run{run_idx}.pkl', 'rb') as f:
             agent_B = pickle.load(f)
 
-        finished, games_per_100k, win_A_pct, win_B_pct, draw_pct, match_lengths, match_length_given_outcome = evaluate(agent_a = agent_A,
-                                                                                                                    agent_b =  agent_B,
+        finished, games_per_100k, win_A_pct, win_B_pct, draw_pct, match_lengths, match_length_given_outcome = evaluate(agent_A = agent_A,
+                                                                                                                    agent_B =  agent_B,
                                                                                                                     env = env,
                                                                                                                     n_steps= TEST_STEPS,
                                                                                                                     mode = "selfplay",
@@ -164,19 +165,16 @@ if __name__ == "__main__":
     all_summaries = []
     env.reset()
 
-    for run_idx in tqdm(range(total_runs), desc="Evaluating Belief Agent trained on Belief vs Belief Agent trained on Random", unit="run"):
+    for run_idx in tqdm(range(total_runs), desc="Evaluating Belief Agent trained on Belief Agent vs random agent", unit="run"):
+        
         with open(f'Results/Agents/BBA_agents/belief_agent_A_run{run_idx}.pkl', 'rb') as f:
             agent_A = pickle.load(f)
 
-        # Load the Belief Agent trained on Random (first runs)
-        with open(f'Results/Agents/BR_agents/belief_agent_A_run{run_idx}.pkl', 'rb') as f:
-            agent_B = pickle.load(f)
-
-        finished, games_per_100k, win_A_pct, win_B_pct, draw_pct, match_lengths, match_length_given_outcome = evaluate(agent_a = agent_A,
-                                                                                                                    agent_b =  agent_B,
+        finished, games_per_100k, win_A_pct, win_B_pct, draw_pct, match_lengths, match_length_given_outcome = evaluate(agent_A = agent_A,
+                                                                                                                    agent_B =  None,
                                                                                                                     env = env,
                                                                                                                     n_steps= TEST_STEPS,
-                                                                                                                    mode = "selfplay",
+                                                                                                                    mode = "random",
                                                                                                                     gamma = GAMMA)
     
         # Build summary for this run
@@ -193,6 +191,40 @@ if __name__ == "__main__":
         all_summaries.append(summary)
 
     df_summary = pd.DataFrame(all_summaries)
-    df_summary.to_csv('Results/BBAvsBTR_summary.csv', index=False)
+    df_summary.to_csv('Results/BBAvsRandom_summary.csv', index=False)
 
-        
+
+    all_summaries = []
+    env.reset()
+
+    for run_idx in tqdm(range(total_runs), desc="Evaluating random Agent vs Belief Agent trained on Belief Agent", unit="run"):
+
+        with open(f'Results/Agents/BBA_agents/belief_agent_B_run{run_idx}.pkl', 'rb') as f:
+            agent_B = pickle.load(f)
+
+        finished, games_per_100k, win_A_pct, win_B_pct, draw_pct, match_lengths, match_length_given_outcome = evaluate(agent_A = None,
+                                                                                                                    agent_B =  agent_B,
+                                                                                                                    env = env,
+                                                                                                                    n_steps= TEST_STEPS,
+                                                                                                                    mode = "random vs selfplay",
+                                                                                                                    gamma = GAMMA)
+    
+        # Build summary for this run
+        summary = {
+            'run': run_idx,
+            'finished_games': finished,
+            'games_per_100k_steps': games_per_100k,
+            'win_A_pct': win_A_pct,
+            'win_B_pct': win_B_pct,
+            'draw_pct': draw_pct,
+            'avg_match_length': sum(match_lengths) / len(match_lengths),
+            'std_match_length': pd.Series(match_lengths).std()
+        }
+        all_summaries.append(summary)
+
+    df_summary = pd.DataFrame(all_summaries)
+    df_summary.to_csv('Results/RandomvsBBA_summary.csv', index=False)
+
+
+
+

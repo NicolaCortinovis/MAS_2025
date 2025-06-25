@@ -184,4 +184,45 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    
+    # Plot the policies
+
+    import pickle as pkl
+
+    from football_env import SimpleFootballGame  # your env class
+    from football_agents import set_agent_to_greedy
+
+    env = SimpleFootballGame()
+
+    # Load the trained agent
+    with open("Results/Agents/BR_agents/belief_agent_A_run0.pkl", "rb") as f:
+        agent = pkl.load(f)
+
+    # Set the agent to greedy mode
+    set_agent_to_greedy(agent)
+
+
+
+    policy_a = {}
+    rows, cols = 4, 5
+
+    # Iterate over the grid positions where Agent A could be
+    for row in range(rows):
+        for col in range(cols):
+
+            env.A_pos = (row, col)
+            env.B_pos = (2, 1)
+            env.ownership = "A"
+
+            state = env.state()  # This should give you the state index (0–799)
+            
+            legal_A = env.legal_actions("A")
+            legal_B = env.legal_actions("B")
+        
+            
+            action = agent.select_action(state, legal_A, legal_B)
+            policy_a[(row, col)] = action
+            print(action)
+
+    # Plot the extracted policy
+    plot_policy(policy_a=policy_a, mode="A", title="Agent A Policy")
