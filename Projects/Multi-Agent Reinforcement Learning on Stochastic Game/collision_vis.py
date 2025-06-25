@@ -171,6 +171,47 @@ def create_sequential_collision_scenario(initial_a, initial_b, action_a, action_
     trajectory.append((env.A_pos, env.B_pos, env.ownership, 'H', 'H'))
     return trajectory
 
+def goal_image(pos_a, pos_b, action_a, action_b, has_ball='A', grid_size=(5, 4), save_as="goal_top.png"):
+    """
+    Render and save a static image showing A moving toward goal and B elsewhere.
+    Uses draw_static_field to maintain consistent look.
+    """
+    cols, rows = grid_size
+    fig, ax = plt.subplots(figsize=(cols + 2, rows))
+    draw_static_field(ax, cols, rows)
+
+    a_y, a_x = pos_a
+    b_y, b_x = pos_b
+
+    # Plot agents
+    ax.plot(a_x, a_y, 'o', color='#F03b20')  # A
+    ax.text(a_x + 0.1, a_y + 0.1, 'A', fontsize=12)
+    ax.plot(b_x, b_y, 's', color='blue')     # B
+    ax.text(b_x + 0.1, b_y + 0.1, 'B', fontsize=12)
+
+    # Ball
+    ball_pos = (a_x, a_y) if has_ball == 'A' else (b_x, b_y)
+    ax.add_patch(patches.Circle(ball_pos, 0.4, fill=False, edgecolor='black', linewidth=2))
+
+    # Arrows
+    arrow_deltas = {'N': (0, -0.7), 'S': (0, 0.7), 'E': (0.7, 0), 'W': (-0.7, 0)}
+    if action_a in arrow_deltas:
+        dx, dy = arrow_deltas[action_a]
+        ax.annotate("", xy=(a_x + dx, a_y + dy), xytext=(a_x, a_y),
+                    arrowprops=dict(facecolor='#F03b20',edgecolor = '#F03b20', width=2, headwidth=6))
+    if action_b in arrow_deltas:
+        dx, dy = arrow_deltas[action_b]
+        ax.annotate("", xy=(b_x + dx, b_y + dy), xytext=(b_x, b_y),
+                    arrowprops=dict(facecolor='blue', edgecolor = 'blue', width=2, headwidth=6))
+
+    # Save
+    os.makedirs("results/static", exist_ok=True)
+    filepath = f"results/static/{save_as}"
+    plt.savefig(filepath, bbox_inches='tight')
+    plt.close()
+    print(f"Saved goal image to {filepath}")
+
+
 if __name__ == "__main__":
     env = SimpleFootballGame()
     env.n_rows = 4
@@ -199,3 +240,25 @@ if __name__ == "__main__":
     )
     animate_episode(traj_a_first, save_as="collision_a_first.mp4", show_moves=True,
                     moving_sequence=[None, 'A', None, 'B', None], at_same_time=False)
+    
+
+    # A scores from the top
+    goal_image(
+        pos_a=(1, 0),
+        pos_b=(2, 0),  # Near B's goal (left)
+        action_a='W',
+        action_b='S',  # Moves into goal
+        has_ball='A',
+        save_as="goal_a_top.png"
+    )
+
+    # A scores from the bottom
+    goal_image(
+        pos_a=(2, 0),
+        pos_b=(2, 1),  # Near B's goal (left)
+        action_a='W',
+        action_b='S',
+        has_ball='A',
+        save_as="goal_a_bottom.png"
+    )
+
