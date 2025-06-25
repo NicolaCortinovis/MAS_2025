@@ -8,88 +8,142 @@ import random
 import argparse
 
 
+def run_simulation(arrival_rate, sim_time, n_servers, strategy, save_results=True, show_plot=False, seed=15, service_dist = "exponential", **dist_parameters):
+        """
+        Run a scheduling simulation with the specified parameters. We track the following metrics:
+        - Scheduling strategy used
+        - Busy times of each server
+        - Number of jobs completed by each server
+        - Utilization of each server
+        - Mean, standard deviation, and coefficient of variation of server utilization
+        - Total number of jobs completed
+        - CV Utilization (standard deviation / mean utilization) (It tracks the variability of server utilization)
+        - Throughput (total jobs completed / simulation time)
+        - Arrival rate 
+        - Simulation time
+        - Number of servers
+        - Service distribution
+        - Service distribution parameters (if applicable)
+    
+
+        Args:
+            arrival_rate (float): The rate at which jobs arrive.
+            sim_time (float): Total simulation time.
+            n_servers (int): Number of servers to handle jobs.
+            strategy (str): Scheduling strategy to use ('FIFO', 'LIFO', 'SJF', 'Preemptive LIFO').
+            save_results (bool): Whether to save results to files.
+            show_plot (bool): Whether to display the Gantt chart plot.
+            seed (int): Random seed for reproducibility.
+            service_dist (str): Distribution type for service times ('exponential', 'uniform', etc.).
+            **dist_parameters: Additional parameters for the service distribution (e.g., rate for exponential, mu and sigma for lognormal).
+        Returns:
+            pd.DataFrame: DataFrame containing simulation metrics.
+        """
+        # Set seed
+        random.seed(seed)
+
+        # Setup
+        intervals = []
+        remaining_times = [0.0] * n_servers
+        busy_times = [0.0] * n_servers
+        jobs_done = [0] * n_servers
+
+        env = sp.Environment()
+        servers = make_servers(env, n_servers, strategy)
+
+        env.process(arrival_process(
+            env=env,
+            arrival_rate=arrival_rate,
+            service_dist=service_dist,
+            servers=servers,
+            busy_times=busy_times,
+            jobs_done=jobs_done,
+            strategy=strategy,
+            intervals=intervals,
+            sim_time=sim_time,
+            remaining_times=remaining_times,  # 👈 Add this line
+            **dist_parameters
+        ))
+
+        env.run(until=sim_time)
+
+        # Metrics
+        utilizations = [bt / sim_time for bt in busy_times]
+        mean_U = statistics.mean(utilizations)
+        std_U = statistics.pstdev(utilizations)
+        cv_U = std_U / mean_U if mean_U else float('nan')
+        total_jobs = sum(jobs_done)
+        throughput = total_jobs / sim_time
+
+        metrics = pd.DataFrame({
+            'Strategy': [strategy],
+            'Busy Times': [busy_times],
+            'Jobs Done': [jobs_done],
+            'Utilizations': [utilizations],
+            'Mean Util': [mean_U],
+            'Std Dev Util': [std_U],
+            'CV Util': [cv_U],
+            'Total Jobs': [total_jobs],
+            'Throughput': [throughput],
+            'Arrival Rate': [arrival_rate],
+            'Sim Time': [sim_time],
+            'N Servers': [n_servers],
+            'Service Distribution': [service_dist],
+            'Service Distribution Params': [dist_parameters],
+        })
+
+        if save_results:
+            dir_path = f"Results/{strategy}"
+            os.makedirs(dir_path, exist_ok=True)
+
+            param_str = '_'.join(f"{k}{v}" for k, v in dist_parameters.items())
+            fname_base = f"{strategy}_AR_{arrival_rate}_SR_{service_dist}_Params_{param_str}"
+            metrics.to_csv(f"{dir_path}/metrics_{fname_base}.csv", index=False)
+            plot_gantt_chart(
+                intervals,
+                n_servers,
+                save_path=f"{dir_path}/gantt_{fname_base}.png",
+                title=f"Gantt Chart of {strategy} Scheduling",
+                show=show_plot
+            )
+
+        return metrics
+
+
+
 
 if __name__ == "__main__":
 
-    # Set random seed for reproducibility
-    random.seed(15)
 
-    # Parse command line arguments
-    parser = argparse.ArgumentParser(description="Run a scheduling simulation with specified parameters.")
-    parser.add_argument('--ar', type=float, default=0.4, help='Arrival rate of jobs (default: 0.4), higher means more frequent arrivals')
-    parser.add_argument('--sr', type=float, default=0.2, help='Service rate of jobs (default: 0.2), higher means faster service')
-    parser.add_argument('--sim_time', type=float, default=50, help='Total simulation time (default: 50)')
-    parser.add_argument('--n_proc', type=int, default=3, help='Number of servers (default: 3)')
-    parser.add_argument('--strat', type=str, choices=['FIFO', 'LIFO', 'SJF', 'Preemptive LIFO'], default='FIFO',
-                        help='Scheduling strategy to use (default: FIFO)')
-    args = parser.parse_args()
+    run_simulation(
+        arrival_rate=1,
+        sim_time= 50,
+        n_servers=3,
+        strategy='FIFO',
+        save_results=True,
+        show_plot=True,
+        service_dist='exponential',
+        rate= rate
+    )
 
-    # Extract parameters from parsed arguments
+    run_simulation(
+        arrival_rate=1,
+        sim_time= 50,
+        n_servers=3,
+        strategy='FIFO',
+        save_results=True,
+        show_plot=True,
+        service_dist='exponential',
+        rate= rate/2
+    )
 
-    arrival_rate = parser.parse_args().ar
-    service_rate = parser.parse_args().sr
-    sim_time     = parser.parse_args().sim_time
-    n_servers    = parser.parse_args().n_proc
-    strategy     = parser.parse_args().strat
-
-
-    intervals = []
-    # Needed for metrics
-    busy_times = [0.0]*n_servers    # total busy time
-    jobs_done  = [0]*n_servers      # job counts
-
-    env     = sp.Environment()
-    servers = make_servers(env, n_servers, strategy)
-
-    # start arrivals
-    env.process(arrival_process(env = env,
-                                arrival_rate = arrival_rate,
-                                service_rate = service_rate,
-                                servers = servers,
-                                busy_times = busy_times,
-                                jobs_done = jobs_done,
-                                strategy = strategy,
-                                intervals = intervals,
-                                sim_time= sim_time))
-
-    env.run(until=sim_time)
-
-    # ------ metrics computation ------
-    utilizations = [bt/sim_time for bt in busy_times]
-    mean_U       = statistics.mean(utilizations)
-    std_U        = statistics.pstdev(utilizations)
-    cv_U         = std_U/mean_U if mean_U else float('nan') 
-    total_jobs   = sum(jobs_done)
-    throughput   = total_jobs/sim_time
-
-
-    metrics = pd.DataFrame({
-        'Strategy': [strategy],
-        'Busy Times': [busy_times],
-        'Jobs Done': [jobs_done],
-        'Utilizations': [utilizations],
-        'Mean Util': [mean_U],
-        'Std Dev Util': [std_U],
-        'CV Util': [cv_U],
-        'Total Jobs': [total_jobs],
-        'Throughput': [throughput]
-    })
-
-
-    # print(f"Strategy:               {strategy}")
-    # print(f"Per-server busy times:  {busy_times}")
-    # print(f"Per-server job counts:  {jobs_done}")
-    # print(f"Utilizations:           {[f'{u:.3f}' for u in utilizations]}")
-    # print(f"Mean util:              {mean_U:.3f}")
-    # print(f"Std Dev util:           {std_U:.3f}")
-    # print(f"CV util:                {cv_U:.3f}")
-    # print(f"Total jobs processed:   {total_jobs}")
-    # print(f"Throughput (jobs/time): {throughput:.3f}")
-
-    # If the directory does not exist, create it
-    if not os.path.exists(f"Results/{strategy}"):
-        os.makedirs(f"Results/{strategy}")
-
-    
-    metrics.to_csv(f"Results/{strategy}/metrics_{strategy}_AR_{arrival_rate}_SR_{service_rate}.csv", index=False)
-    plot_gantt_chart(intervals, n_servers, save_path=f"Results/{strategy}/gantt_{strategy}_AR_{arrival_rate}_SR_{service_rate}.png", title= f"Gantt Chart of {strategy} Scheduling", show=True)
+    run_simulation(
+        arrival_rate=1,
+        sim_time= 50,
+        n_servers=3,
+        strategy='FIFO',
+        save_results=True,
+        show_plot=True,
+        service_dist='exponential',
+        rate= rate*2
+    )
