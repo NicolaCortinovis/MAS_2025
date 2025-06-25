@@ -5,13 +5,7 @@ import numpy as np
 import os
 from football_env import SimpleFootballGame
 
-def draw_static_field(ax, cols=5, rows=4):
-    """
-    Draws a static soccer field with goals and grid lines.
-    :param ax: Matplotlib axis to draw on.
-    :param cols: Number of columns in the grid.
-    :param rows: Number of rows in the grid.
-    """
+def draw_static_field(ax, rows=4, cols=5):
     ax.set_xlim(-1.5, cols + 0.5)
     ax.set_ylim(-0.5, rows - 0.5)
     ax.set_xticks([])
@@ -27,32 +21,20 @@ def draw_static_field(ax, cols=5, rows=4):
 
     # Draw goal nets
     for y in [1, 2]:
-        # A's goal (left)
         ax.add_patch(plt.Rectangle((-1.5, y - 0.5), 1, 1, color='lightblue', alpha=0.3))
         ax.text(-1.0, y, "B's GOAL", va='center', ha='center', fontsize=8)
 
-        # B's goal (right, flush with grid)
         ax.add_patch(plt.Rectangle((cols - 0.5, y - 0.5), 1, 1, color='gold', alpha=0.3))
         ax.text(cols, y, "A's GOAL", va='center', ha='center', fontsize=8)
 
-    # Remove outer border (spines)
     for spine in ax.spines.values():
         spine.set_visible(False)
 
 
-
-def animate_episode(trajectory, grid_size=(5, 4), interval=600, save_as=None):
-    """
-    Animates an episode of the soccer game.
-    :param trajectory: List of states from the episode.
-    :param grid_size: Tuple (cols, rows) for the grid size.
-    :param interval: Delay between frames in milliseconds.
-    :param save_as: If provided, saves the animation to this filename.
-    """
-
-    cols, rows = grid_size
+def animate_episode(trajectory, grid_size=(4, 5), interval=600, save_as=None):
+    rows, cols = grid_size
     fig, ax = plt.subplots(figsize=(cols + 2, rows))
-    draw_static_field(ax, cols, rows)
+    draw_static_field(ax, rows=rows, cols=cols)
 
     agent_a = ax.plot([], [], 'o', color='#F03b20')[0]   
     agent_b = ax.plot([], [], 's', color='blue')[0]
@@ -69,14 +51,14 @@ def animate_episode(trajectory, grid_size=(5, 4), interval=600, save_as=None):
         return agent_a, agent_b, label_a, label_b, ball_circle
 
     def update(frame):
-        (ax_b_x, ax_b_y), (ax_a_x, ax_a_y), has_ball = trajectory[frame]
-        agent_a.set_data([ax_a_x], [ax_a_y])
-        agent_b.set_data([ax_b_x], [ax_b_y])
-        label_a.set_position((ax_a_x + 0.1, ax_a_y + 0.1))
-        label_b.set_position((ax_b_x + 0.1, ax_b_y + 0.1))
+        (a_row, a_col), (b_row, b_col), has_ball = trajectory[frame]
+        agent_a.set_data([a_col], [a_row])
+        agent_b.set_data([b_col], [b_row])
+        label_a.set_position((a_col + 0.1, a_row + 0.1))
+        label_b.set_position((b_col + 0.1, b_row + 0.1))
         label_a.set_text('A')
         label_b.set_text('B')
-        ball_circle.set_center((ax_a_x, ax_a_y) if has_ball == 'A' else (ax_b_x, ax_b_y))
+        ball_circle.set_center((a_col, a_row) if has_ball == 'A' else (b_col, b_row))
         ball_circle.set_visible(True)
         return agent_a, agent_b, label_a, label_b, ball_circle
 
@@ -91,19 +73,14 @@ def animate_episode(trajectory, grid_size=(5, 4), interval=600, save_as=None):
     plt.title("Soccer Game")
     plt.show()
 
-def plot_policy(policy_a=None, policy_b=None, mode="both", grid_size=(5, 4), title=None, save_as=None):
-    """
-    Plots the policies for agents A and B on a grid.
-    :param policy_a: Dictionary mapping (row, col) to action for agent A.
-    :param policy_b: Dictionary mapping (row, col) to action for agent B.
-    :param mode: "A", "B", or "both" to indicate which policies to plot.
-    :param grid_size: Tuple (cols, rows) for the grid size.
-    :param title: Title for the plot.
-    :param save_as: If provided, saves the plot to this filename.
-    """
-    cols, rows = grid_size
+
+def plot_policy(policy_a=None, policy_b=None, mode="both", grid_size=(4, 5),
+                title=None, subtitle=None, save_as=None,
+                fixed_position=None, ball_owner=None):
+
+    rows, cols = grid_size
     fig, ax = plt.subplots(figsize=(cols + 2, rows))
-    draw_static_field(ax, cols, rows)
+    draw_static_field(ax, rows=rows, cols=cols)
 
     arrow_dx = {'N': 0, 'S': 0, 'E': 0.4, 'W': -0.4, 'H': 0}
     arrow_dy = {'N': -0.4, 'S': 0.4, 'E': 0, 'W': 0, 'H': 0}
@@ -124,63 +101,58 @@ def plot_policy(policy_a=None, policy_b=None, mode="both", grid_size=(5, 4), tit
                      head_width=0.15, head_length=0.1,
                      fc='blue', ec='black', alpha=0.7)
 
+    if subtitle:
+        plt.title(subtitle, fontsize=10)
     if title:
-        plt.title(title)
+        plt.suptitle(title, fontsize=14, fontstyle='italic')
+
+    if fixed_position and mode in ["A", "B"]:
+        row, col = fixed_position
+        player_label = 'B' if mode == "A" else 'A'
+        ax.text(col, row, player_label, fontsize=16, weight='bold',
+                ha='center', va='center', color='black', zorder=10)
+
+        if ball_owner == player_label:
+            circle = patches.Circle((col, row), 0.4, fill=False, edgecolor='black', linewidth=2, zorder=9)
+            ax.add_patch(circle)
 
     if save_as:
-        os.makedirs("results", exist_ok=True)
-        plt.savefig(f"results/{save_as}")
-        print(f"Saved static policy plot to results/{save_as}")
+        os.makedirs("Results/Policies", exist_ok=True)
+        plt.savefig(f"Results/Policies/{save_as}")
+        print(f"Saved static policy plot to Results/Policies/{save_as}")
 
     plt.show()
 
 
+def policy_for_starting_player(agent, env, starting_player, tracked_player, grid_size=(4, 5)):
+    rows, cols = grid_size
+    policy = {}
 
-def main():
+    if tracked_player == 'A':
+        env.B_pos = (2, 1)  # B's starting position
+        legal_B = env.legal_actions("B")
+    else:
+        env.A_pos = (1, 3)
+        legal_A = env.legal_actions("A")
 
-    #######################################################################
-        ########### Example of a simple football game ################
-    #######################################################################
+    env.ownership = starting_player
 
-    env = SimpleFootballGame()
+    for row in range(rows):
+        for col in range(cols):
+            if tracked_player == 'A':
+                env.A_pos = (row, col)
+                legal_A = env.legal_actions("A")
+            else:
+                env.B_pos = (row, col)
+                legal_B = env.legal_actions("B")
 
-    # Define env characteristics
-    env.n_rows = 4
-    env.n_cols = 5
-    env.diffs = {
-        'N': (-1,  0),
-        'S': ( 1,  0),
-        'E': ( 0,  1),
-        'W': ( 0, -1),
-        'H': ( 0,  0)
-    }
+            state = env.state()
 
-    trajectory = []
-    env.reset()
-    trajectory.append(env.get_state())
 
-    for _ in range(15):
-        a_action = np.random.choice(env.legal_actions("A"))
-        b_action = np.random.choice(env.legal_actions("B"))
-        env.step(a_action, b_action)
-        trajectory.append(env.get_state())
+            action = agent.select_action(state, legal_A, legal_B)
+            policy[(row, col)] = action
 
-    animate_episode(trajectory, save_as="example_game.mp4")
-
-    # Random dummy policies for demo
-    policy_a = {(r, c): np.random.choice(['N', 'S', 'E', 'W', 'H'])
-                for r in range(env.n_rows) for c in range(env.n_cols)}
-    policy_b = {(r, c): np.random.choice(['N', 'S', 'E', 'W', 'H'])
-                for r in range(env.n_rows) for c in range(env.n_cols)}
-
-    # Visualize separately
-    plot_policy(policy_a=policy_a, mode="A", grid_size=(5, 4), title="Policy A")
-    plot_policy(policy_b=policy_b, mode="B", grid_size=(5, 4), title="Policy B")
-
-    # Visualize combined
-    plot_policy(policy_a=policy_a, policy_b=policy_b, mode="both",
-                grid_size=(5, 4), title="Combined Policy", save_as="combined_policy.png")
-
+    return policy
 
 
 if __name__ == "__main__":
@@ -189,7 +161,7 @@ if __name__ == "__main__":
 
     import pickle as pkl
 
-    from football_env import SimpleFootballGame  # your env class
+    from football_env import SimpleFootballGame, A_STRT, B_STRT
     from football_agents import set_agent_to_greedy
 
     env = SimpleFootballGame()
@@ -202,27 +174,39 @@ if __name__ == "__main__":
     set_agent_to_greedy(agent)
 
 
+    # Policy plots of the starting states for 
+    # BBA(r) vs RA
+    # BBA(b) vs BBA(b)
+    # BBA(r) vs BBA(b)
+    # RA vs BBA(b)
 
-    policy_a = {}
-    rows, cols = 4, 5
+    # Extract policies for agent A starting from its initial position
+    policy_BBA_r_owner = policy_for_starting_player(agent, env, starting_player='A', tracked_player='A')
+    policy_BBA_r_not_owner = policy_for_starting_player(agent, env, starting_player='B', tracked_player='A')
 
-    # Iterate over the grid positions where Agent A could be
-    for row in range(rows):
-        for col in range(cols):
+    print(policy_BBA_r_owner)
+    print(policy_BBA_r_not_owner)
 
-            env.A_pos = (row, col)
-            env.B_pos = (2, 1)
-            env.ownership = "A"
+    plot_policy(policy_a = policy_BBA_r_owner, fixed_position = B_STRT, ball_owner= "A",mode="A", subtitle="BBA(r) vs RA", title = "A player π with ball ownership at game startt", save_as="Owner_BBA(R)vsRA_π.png")
+    plot_policy(policy_a = policy_BBA_r_not_owner, fixed_position = B_STRT, ball_owner= "B", mode="A", subtitle="BBA(r) vs RA", title = "A player π without ball ownership at game start", save_as="BBA(R)vsOwnerRA_π.png")
 
-            state = env.state()  # This should give you the state index (0–799)
-            
-            legal_A = env.legal_actions("A")
-            legal_B = env.legal_actions("B")
-        
-            
-            action = agent.select_action(state, legal_A, legal_B)
-            policy_a[(row, col)] = action
-            print(action)
 
-    # Plot the extracted policy
-    plot_policy(policy_a=policy_a, mode="A", title="Agent A Policy")
+
+    # Load the trained agent for BBA(b)
+    with open("Results/Agents/BBA_agents/belief_agent_A_run0.pkl", "rb") as f:
+        agent_a = pkl.load(f)
+
+    with open("Results/Agents/BBA_agents/belief_agent_B_run0.pkl", "rb") as f:
+        agent_b = pkl.load(f)
+
+    # Set the agent to greedy mode
+    set_agent_to_greedy(agent_a)
+    set_agent_to_greedy(agent_b)
+
+    # Extract policies for agent A starting from its initial position
+    policy_BBA_b_owner_A_player = policy_for_starting_player(agent_a, env, starting_player='A', tracked_player='A')
+    policy_BBA_b_not_owner_B_player = policy_for_starting_player(agent_b, env, starting_player='A', tracked_player='B')
+
+    plot_policy(policy_a = policy_BBA_b_owner_A_player, mode="A", fixed_position = B_STRT, ball_owner= "A", subtitle="BBA(b) vs BBA(b)", title = "A player π with ball ownership at game start", save_as="Owner_BBA(B)vsBBA(B)_Aπ.png")
+    plot_policy(policy_b = policy_BBA_b_not_owner_B_player, mode="B", fixed_position = A_STRT, ball_owner= "A", subtitle="BBA(b) vs BBA(b)", title = "B player π without ball ownership at game start", save_as="Owner_BBA(B)vsBBA(B)_Bπ.png")
+

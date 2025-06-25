@@ -87,6 +87,7 @@ class SimpleFootballGame:
         x_b, y_b = divmod(idx_b, COL)
         x_a, y_a = divmod(idx_a, COL)
         owner = "A" if bit == 0 else "B"
+
         return (x_a, y_a), (x_b, y_b), owner
     
     def clamp(self, row, col):
@@ -234,24 +235,22 @@ if __name__ == "__main__":
 
     env = SimpleFootballGame()
 
-
-    # Test state encoding/decoding correctness
-    for s0 in range(NUM_STATES):
-            # manually set the internal state via decoding
-            # decode ownership bit
-            bit = s0 % 2
-            combined = s0 // 2
-            idx_a = combined // N_CELLS
-            idx_b = combined % N_CELLS
-            x_a, y_a = divmod(idx_a, COL)
-            x_b, y_b = divmod(idx_b, COL)
-            env.A_pos = (x_a, y_a)
-            env.B_pos = (x_b, y_b)
-            env.ownership = "A" if bit == 0 else "B"
-            # re-encode via state()
-            s1 = env.state()
-            assert s0 == s1, f"Encoding mismatch: manual {s0} vs state() {s1} for A:{env.A_pos}, B:{env.B_pos}, owner:{env.ownership}"
-    print("State encoding/decoding correctness verified for all states")
+    # Set the env to all possible states, check if the decoding works
+    for x_a in range(ROW):
+        for y_a in range(COL):
+            for x_b in range(ROW):
+                for y_b in range(COL):
+                    for owner in ['A', 'B']:
+                        env.A_pos = (x_a, y_a)
+                        env.B_pos = (x_b, y_b)
+                        env.ownership = owner
+                        state = env.state()
+                        decoded_A, decoded_B, decoded_owner = env.get_state()
+                        assert (decoded_A == (x_a, y_a) and
+                                decoded_B == (x_b, y_b) and
+                                decoded_owner == owner), \
+                            f"State mismatch: {state} -> {decoded_A}, {decoded_B}, {decoded_owner}"
+    print("State encoding and decoding works correctly")
 
     # Test over 10k random resets that the ownership is randomly assigned
     ownerships = []
