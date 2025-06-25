@@ -66,9 +66,9 @@ def animate_episode(trajectory, grid_size=(4, 5), interval=600, save_as=None):
                                   init_func=init, blit=True, interval=interval, repeat=False)
 
     if save_as:
-        os.makedirs("results", exist_ok=True)
-        ani.save(f"results/{save_as}", writer="ffmpeg", fps=1)
-        print(f"Saved animation to results/{save_as}")
+        os.makedirs("Results/Videos", exist_ok=True)
+        ani.save(f"Results/Videos/{save_as}", writer="ffmpeg", fps=1)
+        print(f"Saved animation to Results/Videos/{save_as}")
 
     plt.title("Soccer Game")
     plt.show()
@@ -162,51 +162,80 @@ if __name__ == "__main__":
     import pickle as pkl
 
     from football_env import SimpleFootballGame, A_STRT, B_STRT
-    from football_agents import set_agent_to_greedy
+    from football_agents import set_agent_to_greedy, collect_episode_states
 
     env = SimpleFootballGame()
 
-    # Load the trained agent
+    plotting_policies = False
+
+
+    if plotting_policies == True:
+
+        # Load the trained agent
+        with open("Results/Agents/BR_agents/belief_agent_A_run0.pkl", "rb") as f:
+            agent = pkl.load(f)
+
+        # Set the agent to greedy mode
+        set_agent_to_greedy(agent)
+
+
+        # Policy plots of the starting states for 
+        # BBA(r) vs RA
+        # BBA(b) vs BBA(b)
+
+        # Extract policies for agent A starting from its initial position
+        policy_BBA_r_owner = policy_for_starting_player(agent, env, starting_player='A', tracked_player='A')
+        policy_BBA_r_not_owner = policy_for_starting_player(agent, env, starting_player='B', tracked_player='A')
+
+        plot_policy(policy_a = policy_BBA_r_owner, fixed_position = B_STRT, ball_owner= "A",mode="A", subtitle="BBA(r) vs RA", title = "A player π with ball ownership at game startt", save_as="Owner_BBA(R)vsRA_π.png")
+        plot_policy(policy_a = policy_BBA_r_not_owner, fixed_position = B_STRT, ball_owner= "B", mode="A", subtitle="BBA(r) vs RA", title = "A player π without ball ownership at game start", save_as="BBA(R)vsOwnerRA_π.png")
+
+
+
+        # Load the trained agent for BBA(b)
+        with open("Results/Agents/BBA_agents/belief_agent_A_run0.pkl", "rb") as f:
+            agent_a = pkl.load(f)
+
+        with open("Results/Agents/BBA_agents/belief_agent_B_run0.pkl", "rb") as f:
+            agent_b = pkl.load(f)
+
+        # Set the agent to greedy mode
+        set_agent_to_greedy(agent_a)
+        set_agent_to_greedy(agent_b)
+
+        # Extract policies for agent A starting from its initial position
+        policy_BBA_b_owner_A_player = policy_for_starting_player(agent_a, env, starting_player='A', tracked_player='A')
+        policy_BBA_b_not_owner_B_player = policy_for_starting_player(agent_b, env, starting_player='A', tracked_player='B')
+
+        plot_policy(policy_a = policy_BBA_b_owner_A_player, mode="A", fixed_position = B_STRT, ball_owner= "A", subtitle="BBA(b) vs BBA(b)", title = "A player π with ball ownership at game start", save_as="Owner_BBA(B)vsBBA(B)_Aπ.png")
+        plot_policy(policy_b = policy_BBA_b_not_owner_B_player, mode="B", fixed_position = A_STRT, ball_owner= "A", subtitle="BBA(b) vs BBA(b)", title = "B player π without ball ownership at game start", save_as="Owner_BBA(B)vsBBA(B)_Bπ.png")
+
+    
+
+    # Animate an episode of BBA(r) vs RA and one of BBA(b) vs BBA(b)
+
+    # load the agents
+
     with open("Results/Agents/BR_agents/belief_agent_A_run0.pkl", "rb") as f:
-        agent = pkl.load(f)
+        agent_BBA_r_A = pkl.load(f)
 
-    # Set the agent to greedy mode
-    set_agent_to_greedy(agent)
-
-
-    # Policy plots of the starting states for 
-    # BBA(r) vs RA
-    # BBA(b) vs BBA(b)
-    # BBA(r) vs BBA(b)
-    # RA vs BBA(b)
-
-    # Extract policies for agent A starting from its initial position
-    policy_BBA_r_owner = policy_for_starting_player(agent, env, starting_player='A', tracked_player='A')
-    policy_BBA_r_not_owner = policy_for_starting_player(agent, env, starting_player='B', tracked_player='A')
-
-    print(policy_BBA_r_owner)
-    print(policy_BBA_r_not_owner)
-
-    plot_policy(policy_a = policy_BBA_r_owner, fixed_position = B_STRT, ball_owner= "A",mode="A", subtitle="BBA(r) vs RA", title = "A player π with ball ownership at game startt", save_as="Owner_BBA(R)vsRA_π.png")
-    plot_policy(policy_a = policy_BBA_r_not_owner, fixed_position = B_STRT, ball_owner= "B", mode="A", subtitle="BBA(r) vs RA", title = "A player π without ball ownership at game start", save_as="BBA(R)vsOwnerRA_π.png")
-
-
-
-    # Load the trained agent for BBA(b)
     with open("Results/Agents/BBA_agents/belief_agent_A_run0.pkl", "rb") as f:
-        agent_a = pkl.load(f)
-
+        agent_BBA_b_A = pkl.load(f)
+    
     with open("Results/Agents/BBA_agents/belief_agent_B_run0.pkl", "rb") as f:
-        agent_b = pkl.load(f)
+        agent_BBA_b_B = pkl.load(f)
 
-    # Set the agent to greedy mode
-    set_agent_to_greedy(agent_a)
-    set_agent_to_greedy(agent_b)
+    set_agent_to_greedy(agent_BBA_r_A)
+    set_agent_to_greedy(agent_BBA_b_A)
+    set_agent_to_greedy(agent_BBA_b_B)
 
-    # Extract policies for agent A starting from its initial position
-    policy_BBA_b_owner_A_player = policy_for_starting_player(agent_a, env, starting_player='A', tracked_player='A')
-    policy_BBA_b_not_owner_B_player = policy_for_starting_player(agent_b, env, starting_player='A', tracked_player='B')
+    # Animate an episode of BBA(r) vs RA
+    env.reset()
+    trajectory_BBA_r = collect_episode_states(env, agent_BBA_r_A, None, mode = 'random')
+    animate_episode(trajectory_BBA_r, save_as="BBA(R)vsRA_episode.mp4")
 
-    plot_policy(policy_a = policy_BBA_b_owner_A_player, mode="A", fixed_position = B_STRT, ball_owner= "A", subtitle="BBA(b) vs BBA(b)", title = "A player π with ball ownership at game start", save_as="Owner_BBA(B)vsBBA(B)_Aπ.png")
-    plot_policy(policy_b = policy_BBA_b_not_owner_B_player, mode="B", fixed_position = A_STRT, ball_owner= "A", subtitle="BBA(b) vs BBA(b)", title = "B player π without ball ownership at game start", save_as="Owner_BBA(B)vsBBA(B)_Bπ.png")
 
+    # Animate an episode of BBA(b) vs BBA(b)
+    env.reset()
+    trajectory_BBA_b = collect_episode_states(env, agent_BBA_b_A, agent_BBA_b_B, mode = 'selfplay')
+    animate_episode(trajectory_BBA_b, save_as="BBA(B)vsBBA(B)_episode.mp4")
