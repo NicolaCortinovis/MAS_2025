@@ -1,6 +1,5 @@
 # Ignore these formats for now, just during development
 # mp4
-*.mp4
 #.pyc  
 *.pyc
 
