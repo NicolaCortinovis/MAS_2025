@@ -123,9 +123,10 @@ def animate_episode(trajectory, grid_size=(5, 4), interval=600, save_as=None,
                                   init_func=init, blit=True, interval=interval, repeat=False)
 
     if save_as:
-        os.makedirs("results", exist_ok=True)
-        ani.save(f"results/{save_as}", writer="ffmpeg", fps=1)
-        print(f"Saved animation to results/{save_as}")
+        os.makedirs("results/collisions", exist_ok=True)
+        ani.save(f"results/collisions/{save_as}", writer="ffmpeg", fps=1)
+        print(f"Saved animation to results/collisions/{save_as}")
+
 
     plt.title("Soccer Game")
     plt.show()
