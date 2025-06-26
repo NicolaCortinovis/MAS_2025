@@ -166,7 +166,7 @@ if __name__ == "__main__":
 
 
     plot_lognormal_distributions(
-        mu_sigma_pairs=[(1.5, 0.5), (1, 0.5), (1.0, 1.0)],
+        mu_sigma_pairs=[(0, 0.5), (1, 0.5), (1.0, 1.0)],
         x_range=(0, 15),
         num_points=1000
     )
