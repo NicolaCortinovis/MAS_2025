@@ -1,0 +1,2 @@
+Strategy,Busy Times,Jobs Done,Utilizations,Mean Util,Std Dev Util,CV Util,Total Jobs,Throughput,Mean Latencies,Arrival Rate,Sim Time,N Servers,Service Distribution,Service Distribution Params
+Preemptive LIFO,"[20.307562622946936, 21.136416993242054, 19.410911523657962]","[20, 12, 17]","[0.8123025049178775, 0.8454566797296822, 0.7764364609463185]",0.8113985485312927,0.02818463533070793,0.03473587102383256,49,1.96,1.3198391287462252,3.5,25,3,exponential,{'rate': 1.0}

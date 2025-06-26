@@ -1,0 +1,2 @@
+Strategy,Busy Times,Jobs Done,Utilizations,Mean Util,Std Dev Util,CV Util,Total Jobs,Throughput,Mean Latencies,Arrival Rate,Sim Time,N Servers,Service Distribution,Service Distribution Params
+FIFO,"[22.876186249189953, 18.659015902454602, 19.593439815819576]","[19, 17, 16]","[0.9150474499675981, 0.746360636098184, 0.783737592632783]",0.8150485595661884,0.07233760101580272,0.08875250457997814,52,2.08,3.291115792166513,3.5,25,3,lognormal,"{'mu': 0.0, 'sigma': 0.5}"

@@ -1,0 +1,2 @@
+Strategy,Busy Times,Jobs Done,Utilizations,Mean Util,Std Dev Util,CV Util,Total Jobs,Throughput,Mean Latencies,Arrival Rate,Sim Time,N Servers,Service Distribution,Service Distribution Params
+LIFO,"[15.71641063497594, 12.620658191861654, 6.603265554575944]","[7, 13, 9]","[0.6286564253990377, 0.5048263276744662, 0.26413062218303773]",0.46587112508551387,0.15134485160085495,0.324864202676383,29,1.16,1.6622692623815065,1.5,25,3,exponential,{'rate': 1.0}

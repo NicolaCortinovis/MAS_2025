@@ -1,0 +1,2 @@
+Strategy,Busy Times,Jobs Done,Utilizations,Mean Util,Std Dev Util,CV Util,Total Jobs,Throughput,Mean Latencies,Arrival Rate,Sim Time,N Servers,Service Distribution,Service Distribution Params
+SJF,"[15.71641063497594, 11.92853587760692, 7.295387868830677]","[7, 12, 10]","[0.6286564253990377, 0.4771414351042768, 0.2918155147532271]",0.46587112508551387,0.13774545288832346,0.29567287060995534,29,1.16,1.4527401265058535,1.5,25,3,exponential,{'rate': 1.0}
