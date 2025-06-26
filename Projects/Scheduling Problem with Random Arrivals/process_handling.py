@@ -37,7 +37,7 @@ def make_servers(env, n_servers, strategy):
         raise ValueError(f"Unknown strategy: {strategy}")
 
 def job(env, name, service_time, servers, busy_times, jobs_done,
-        strategy, seq, intervals, sim_time, remaining_times):
+        strategy, seq, intervals, sim_time, remaining_times, arrival_time, latencies):
     """
     A job process that requests a server, waits if necessary, runs for its service time,
     handles preemption if the strategy allows it, and records metrics for visualization.
@@ -54,6 +54,9 @@ def job(env, name, service_time, servers, busy_times, jobs_done,
         intervals: List of tuples used to plot Gantt charts.
         sim_time: Total simulation time (used to clip visualization).
         remaining_times: List to track remaining service times for jobs in progress
+        arrival_time: Time when the job arrived in the system (for latency calculation).
+        latencies: List to track latencies of completed jobs (end time - arrival time).
+        
 
     Example:
         - A job arrives and requests a server (according to the chosen strategy).
@@ -125,6 +128,8 @@ def job(env, name, service_time, servers, busy_times, jobs_done,
             busy_times[idx] += service_time
             jobs_done[idx] += 1
             remaining_times[idx] = 0.0  # Clear running work
+            completion_time = env.now
+            latencies.append(completion_time - arrival_time)
         except sp.Interrupt:
             worked = env.now - start
             busy_times[idx] += worked
@@ -132,13 +137,13 @@ def job(env, name, service_time, servers, busy_times, jobs_done,
             remaining_times[idx] = remaining  # Update tracked remaining time
             env.process(job(env, name, remaining, servers,
                             busy_times, jobs_done, strategy, seq,
-                            intervals, sim_time, remaining_times))  # Requeue job
+                            intervals, sim_time, remaining_times, arrival_time, latencies))  # Requeue job
 
 
 
 def arrival_process(env, arrival_rate, service_dist,
                     servers, busy_times, jobs_done, strategy, intervals, sim_time,
-                    remaining_times, **dist_params):    
+                    remaining_times, latencies, **dist_params):    
     """
     Generates and launches jobs
 
@@ -153,6 +158,7 @@ def arrival_process(env, arrival_rate, service_dist,
         intervals: List of (server_id, start, end, job_name) for Gantt chart visualization.
         sim_time: Total simulation time (used for clipping visuals).
         remaining_times: List to track remaining service times for jobs in progress (used for SJF).
+        latencies: List to track latencies of completed jobs (end time - arrival time).
         dist_params: Parameters for the service distribution (rate for exponential, mu and sigma for lognormal).
     """
 
@@ -183,6 +189,7 @@ def arrival_process(env, arrival_rate, service_dist,
                              "Use 'exponential' or 'lognormal'.")
 
         # Create and schedule a new job process in the environment
+        arrival_time = env.now
         env.process(job(env,
                         f"Job-{i}",               # Unique job name
                         service_time,             # Time needed to complete this job
@@ -193,6 +200,8 @@ def arrival_process(env, arrival_rate, service_dist,
                         seq=i,                    # Sequence number (used for priority)
                         intervals=intervals,      # Gantt chart recording
                         sim_time=sim_time,        # Max simulation time for visualization
-                        remaining_times=remaining_times))       # Remaining service times
+                        remaining_times=remaining_times,  # Remaining service times for jobs in progress
+                        latencies=latencies,              # Latencies of completed jobs (end_time - arrival_time)
+                        arrival_time=arrival_time))       # Arrival time of the job
 
         i += 1  # Increment the job ID for the next arriving job

@@ -44,6 +44,7 @@ def run_simulation(arrival_rate, sim_time, n_servers, strategy, save_results=Tru
 
         # Setup
         intervals = []
+        latencies = []
         remaining_times = [0.0] * n_servers
         busy_times = [0.0] * n_servers
         jobs_done = [0] * n_servers
@@ -61,7 +62,8 @@ def run_simulation(arrival_rate, sim_time, n_servers, strategy, save_results=Tru
             strategy=strategy,
             intervals=intervals,
             sim_time=sim_time,
-            remaining_times=remaining_times,  # 👈 Add this line
+            remaining_times=remaining_times,
+            latencies=latencies,
             **dist_parameters
         ))
 
@@ -74,6 +76,7 @@ def run_simulation(arrival_rate, sim_time, n_servers, strategy, save_results=Tru
         cv_U = std_U / mean_U if mean_U else float('nan')
         total_jobs = sum(jobs_done)
         throughput = total_jobs / sim_time
+        mean_latencies = statistics.mean(latencies) if latencies else float('nan')
 
         metrics = pd.DataFrame({
             'Strategy': [strategy],
@@ -85,6 +88,7 @@ def run_simulation(arrival_rate, sim_time, n_servers, strategy, save_results=Tru
             'CV Util': [cv_U],
             'Total Jobs': [total_jobs],
             'Throughput': [throughput],
+            'Mean Latencies': [mean_latencies],
             'Arrival Rate': [arrival_rate],
             'Sim Time': [sim_time],
             'N Servers': [n_servers],
@@ -114,6 +118,7 @@ def run_simulation(arrival_rate, sim_time, n_servers, strategy, save_results=Tru
 
 if __name__ == "__main__":
 
+    rate = 1.0  # Default rate for exponential distribution
 
     run_simulation(
         arrival_rate=1,
@@ -126,24 +131,3 @@ if __name__ == "__main__":
         rate= rate
     )
 
-    run_simulation(
-        arrival_rate=1,
-        sim_time= 50,
-        n_servers=3,
-        strategy='FIFO',
-        save_results=True,
-        show_plot=True,
-        service_dist='exponential',
-        rate= rate/2
-    )
-
-    run_simulation(
-        arrival_rate=1,
-        sim_time= 50,
-        n_servers=3,
-        strategy='FIFO',
-        save_results=True,
-        show_plot=True,
-        service_dist='exponential',
-        rate= rate*2
-    )
