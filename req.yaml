@@ -11,3 +11,4 @@ dependencies:
   - simpy
   - tqdm
   - ffmpeg              
+  - scipy

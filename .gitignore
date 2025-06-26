@@ -3,8 +3,6 @@
 #.pyc  
 *.pyc
 
-/Multi-Agent Reinforcement Learning on Stochastic Game/results/*
-Projects/Scheduling Problem with Random Arrivals/Results/*
 
 
 # Ignore .csv .pkl and Zone.Identifier files
