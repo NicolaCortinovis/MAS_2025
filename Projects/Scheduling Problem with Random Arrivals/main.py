@@ -4,8 +4,8 @@ from plots import plot_gantt_chart
 import statistics
 import pandas as pd
 import os
+import glob
 import random
-import argparse
 
 
 def run_simulation(arrival_rate, sim_time, n_servers, strategy, save_results=True, show_plot=False, seed=15, service_dist = "exponential", **dist_parameters):
@@ -48,6 +48,7 @@ def run_simulation(arrival_rate, sim_time, n_servers, strategy, save_results=Tru
         remaining_times = [0.0] * n_servers
         busy_times = [0.0] * n_servers
         jobs_done = [0] * n_servers
+        arrival_times_by_job = {}
 
         env = sp.Environment()
         servers = make_servers(env, n_servers, strategy)
@@ -64,6 +65,7 @@ def run_simulation(arrival_rate, sim_time, n_servers, strategy, save_results=Tru
             sim_time=sim_time,
             remaining_times=remaining_times,
             latencies=latencies,
+            arrival_times_by_job=arrival_times_by_job,
             **dist_parameters
         ))
 
@@ -106,8 +108,9 @@ def run_simulation(arrival_rate, sim_time, n_servers, strategy, save_results=Tru
             plot_gantt_chart(
                 intervals,
                 n_servers,
+                arrival_times_by_job = arrival_times_by_job,
                 save_path=f"{dir_path}/gantt_{fname_base}.png",
-                title=f"Gantt Chart of {strategy} Scheduling",
+                title=f"Gantt Chart of {strategy} Scheduling with {service_dist} Service with Params {param_str}",
                 show=show_plot
             )
 
@@ -115,19 +118,99 @@ def run_simulation(arrival_rate, sim_time, n_servers, strategy, save_results=Tru
 
 
 
+def evaluation_metrics_reports(results_root="Results"):
+    """
+    Generate summary metric reports for each strategy based on previously saved simulation CSVs.
+
+    Creates 4 files:
+        - Results/FIFO_summary.csv
+        - Results/LIFO_summary.csv
+        - Results/SJF_summary.csv
+        - Results/Preemptive LIFO_summary.csv
+    Each report contains:
+        - Arrival Rate
+        - Service Distribution
+        - Service Distribution Params
+        - Mean Latencies
+        - Throughput
+        - Utilizations
+        - CV Util
+
+    Args:
+        results_root (str): Path to the base results directory where strategy folders are located.
+    """
+    strategies = ["FIFO", "LIFO", "SJF", "Preemptive LIFO"]
+
+    for strategy in strategies:
+        strategy_path = os.path.join(results_root, strategy)
+        if not os.path.isdir(strategy_path):
+            print(f"Directory not found: {strategy_path}")
+            continue
+
+        summary_rows = []
+        for file_path in glob.glob(os.path.join(strategy_path, "metrics_*.csv")):
+            df = pd.read_csv(file_path)
+
+            if df.empty:
+                continue
+
+            row = {
+                "Arrival Rate": df.loc[0, "Arrival Rate"],
+                "Service Distribution": df.loc[0, "Service Distribution"],
+                "Service Distribution Params": df.loc[0, "Service Distribution Params"],
+                "Mean Latencies": df.loc[0, "Mean Latencies"],
+                "Throughput": df.loc[0, "Throughput"],
+                "CV Util": df.loc[0, "CV Util"],
+                "Utilizations": df.loc[0, "Utilizations"],
+            }
+
+            summary_rows.append(row)
+
+        if summary_rows:
+            summary_df = pd.DataFrame(summary_rows)
+            save_path = os.path.join(results_root, f"{strategy}_summary.csv")
+            summary_df.to_csv(save_path, index=False)
+            print(f"Saved summary to {save_path}")
+        else:
+            print(f"No valid CSV files found for strategy {strategy}")
+
+
+
 
 if __name__ == "__main__":
+    
+    # Service distribution parameters
 
-    rate = 1.0  # Default rate for exponential distribution
+    random.seed(15)  # Set seed for reproducibility
 
-    run_simulation(
-        arrival_rate=1,
-        sim_time= 50,
-        n_servers=3,
-        strategy='FIFO',
-        save_results=True,
-        show_plot=True,
-        service_dist='exponential',
-        rate= rate
-    )
+    mu = 0.0     # Mean for lognormal distribution
+    sigma = 0.5  # Standard deviation for lognormal distribution
+    rho = 1.0    # Rate for exponential distribution
 
+    simulation_times = 25
+
+    lambdas = [1.5, 3.5]  # Low load and high load arrival 
+    strategies = ["FIFO", "LIFO", "SJF", "Preemptive LIFO"]
+    service_dists = [
+        ("lognormal", {"mu": mu, "sigma": sigma}),
+        ("exponential", {"rate": rho}),
+    ]
+
+    for arrival_rate in lambdas:
+        for strategy in strategies:
+            for service_dist, dist_params in service_dists:
+
+                # Run the simulation
+                metrics = run_simulation(
+                    arrival_rate=arrival_rate,
+                    sim_time= simulation_times,  # Total simulation time
+                    n_servers=3,    # Number of servers
+                    strategy=strategy,
+                    service_dist=service_dist,
+                    save_results=True,
+                    show_plot=False,  # Set to True if you want to see the plot
+                    **dist_params
+                )
+
+
+    evaluation_metrics_reports(results_root="Results")

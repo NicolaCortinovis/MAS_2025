@@ -71,13 +71,13 @@ def job(env, name, service_time, servers, busy_times, jobs_done,
 
     # Choose the least-loaded server based on the current workload
 
-    # --- Step 0: Compute estimated workload on each server ---
+    # Compute estimated workload on each server
     workloads = []
     for i, srv in enumerate(servers):
-        # 1. Work remaining in the queue (from service_time we attach to each request)
+        # Work remaining in the queue (from service_time we attach to each request)
         queue_work = sum(getattr(req, 'service_time', 0.0) for req in srv.queue)
         
-        # 2. Work remaining in the current job
+        # Work remaining in the current job
         running_work = remaining_times[i]
         workloads.append(queue_work + running_work)
 
@@ -86,8 +86,8 @@ def job(env, name, service_time, servers, busy_times, jobs_done,
     server = servers[idx]
 
     # Debugging output
-    print(f"t={env.now:.2f}, workloads={workloads} → idx={idx} "
-          f"with service_time={service_time:.2f}, seq={seq}, strategy={strategy}")
+    # print(f"t={env.now:.2f}, workloads={workloads} → idx={idx} "
+    #      f"with service_time={service_time:.2f}, seq={seq}, strategy={strategy}")
 
     # Create the correct type of request based on the strategy
 
@@ -143,7 +143,7 @@ def job(env, name, service_time, servers, busy_times, jobs_done,
 
 def arrival_process(env, arrival_rate, service_dist,
                     servers, busy_times, jobs_done, strategy, intervals, sim_time,
-                    remaining_times, latencies, **dist_params):    
+                    remaining_times, latencies, arrival_times_by_job, **dist_params):    
     """
     Generates and launches jobs
 
@@ -159,6 +159,7 @@ def arrival_process(env, arrival_rate, service_dist,
         sim_time: Total simulation time (used for clipping visuals).
         remaining_times: List to track remaining service times for jobs in progress (used for SJF).
         latencies: List to track latencies of completed jobs (end time - arrival time).
+        arrival_times_by_job: Dictionary to track arrival times of jobs by their unique IDs.
         dist_params: Parameters for the service distribution (rate for exponential, mu and sigma for lognormal).
     """
 
@@ -190,6 +191,7 @@ def arrival_process(env, arrival_rate, service_dist,
 
         # Create and schedule a new job process in the environment
         arrival_time = env.now
+        arrival_times_by_job[f"Job-{i}"] = arrival_time
         env.process(job(env,
                         f"Job-{i}",               # Unique job name
                         service_time,             # Time needed to complete this job
