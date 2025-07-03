@@ -56,6 +56,6 @@ $$
 </div>
 
 
-[^Prj1]: [Scheduling Problem with Random Arrivals](./Projects/%20Scheduling%20Problem%20with%20Random%20Arrivals/2025_MAS_course_project_topics.pdf)
+[^Prj1]: [Scheduling Problem with Random Arrivals](./Projects/Scheduling%20Problem%20with%20Random%20Arrivals/2025_MAS_course_project_topics.pdf)
 [^Lit94]: [M. L. Littman (1994) Markov games as a framework for multi-agent reinforcement learning. Proceedings of ICML’94](./Projects/Multi-Agent%20Reinforcement%20Learning%20on%20Stochastic%20Game/Material/littman94markov.pdf)
 [^Prj2]: [Multi-Agent Reinforcement Learning on Stochastic Game](./Projects/Multi-Agent%20Reinforcement%20Learning%20on%20Stochastic%20Game/Material/Projects-Padoan.pdf)
