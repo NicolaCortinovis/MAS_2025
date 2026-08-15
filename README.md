@@ -6,7 +6,7 @@ For a quick overview feel free to consult the two short reports: [MARL report](.
 [![Presentation hook](presentation.png)](presentation.pdf)
 
 
-[^gifs]: Slides 12 and 13 contained gifs which cannot be aniamted in the `.pdf` format :frowning_face:
+[^gifs]: Slides 12 and 13 contained gifs which cannot be animated in the `.pdf` format :frowning_face:
 
 # Problem statements
 
