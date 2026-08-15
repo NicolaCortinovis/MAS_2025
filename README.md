@@ -1,7 +1,7 @@
 # Multi agent system
 This repository contains the code for the projects of the Multi Agent Systems course teached by Professors Padoan Tommaso and Petrov Tatjana at the Artificial Intelligence &amp; Data Science Master @ University of Trieste.
 
-For a quick overview feel free to consult the two short reports: [MARL report](./MARL/Report.pdf) and [SPRA report](./SPRA/Report.pdf) or the presentation :point_down:
+For a quick overview feel free to consult the two short reports: [MARL report](./Projects/MARL/Report.pdf) and [SPRA report](./Projects/SPRA/Report.pdf) or the presentation :point_down:
 
 
 [![Presentation hook](presentation.png)](presentation.pdf)
