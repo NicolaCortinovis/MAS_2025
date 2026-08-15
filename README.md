@@ -6,6 +6,8 @@ For a quick overview feel free to consult the two short reports: [MARL report](.
 
 [![Presentation hook](presentation.png)](presentation.pdf)
 
+# Problem statements
+
 ## 6. Scheduling Problem with Random Arrivals[^Prj1]
 
 **Setting**: Scheduling problems are central to computing systems, where jobs (or tasks) must be assigned to limited resources over time. The goal is often to optimize metrics such as average waiting time, latency[^latency], or system throughput. The complexity of the scheduling problem varies depending on system assumptions, such as the number of servers, whether preemption is allowed, and whether job durations and arrival times are known in advance.
